@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* Scrollbar container */
+::-webkit-scrollbar {
+  display: none;
+}
+.sidebar * {
+  user-select: none;
+}
