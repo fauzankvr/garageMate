@@ -1,64 +1,105 @@
-import costumerService from "../services/costumer.service";
-import type { Response, Request } from "express"
+import { Request, Response } from "express";
+import customerService from "../services/costumer.service";
 
-class CostumerController {
-  async getAll(req: Request, res: Response) {
-   
-    const costumers = await costumerService.findAll();
-    res.json(costumers);
+// Define the Customer interface
+interface Customer {
+  _id?: string;
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+}
+
+class CustomerController {
+  async getAll(req: Request, res: Response): Promise<void> {
+    try {
+      const customers = await customerService.findAll();
+      res.json(customers);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching customers", error });
+    }
   }
-  async getByPhone(req: Request, res: Response) {
+
+  async getByPhone(req: Request, res: Response): Promise<void> {
     const { phone } = req.query;
     if (!phone) {
-      return res.status(400).json({ message: "Phone number is required" });
+      res.status(400).json({ message: "Phone number is required" });
+      return;
     }
     if (typeof phone !== "string") {
-      return res.status(400).json({ message: "Phone number must be a string" });
+      res.status(400).json({ message: "Phone number must be a string" });
+      return;
     }
-    const costumers = await costumerService.findByPhone(phone);
-    res.json(costumers);
+    try {
+      const customers = await customerService.findByPhone(phone);
+      res.json(customers);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching customer by phone", error });
+    }
   }
 
-  async getById(req: Request, res: Response) {
+  async getById(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
     if (!id) {
-      return res.status(400).json({ message: "Missing costumer id" });
+      res.status(400).json({ message: "Missing customer ID" });
+      return;
     }
-    const costumer = await costumerService.findById(id);
-    if (!costumer) {
-      return res.status(404).json({ message: "Costumer not found" });
+    try {
+      const customer = await customerService.findById(id);
+      if (!customer) {
+        res.status(404).json({ message: "Customer not found" });
+        return;
+      }
+      res.json(customer);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching customer", error });
     }
-    res.json(costumer);
   }
 
-  async create(req: Request, res: Response) {
-    const newCostumer = await costumerService.create(req.body);
-    res.status(201).json(newCostumer);
+  async create(req: Request, res: Response): Promise<void> {
+    try {
+      const newCustomer = await customerService.create(req.body as Customer);
+      res.status(201).json(newCustomer);
+    } catch (error) {
+      res.status(400).json({ message: "Error creating customer", error });
+    }
   }
 
-  async update(req: Request, res: Response) {
+  async update(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
     if (!id) {
-      return res.status(400).json({ message: "Missing costumer id" });
+      res.status(400).json({ message: "Missing customer ID" });
+      return 
     }
-    const updatedCostumer = await costumerService.update(id, req.body);
-    if (!updatedCostumer) {
-      return res.status(404).json({ message: "Costumer not found" });
+    try {
+      const updatedCustomer = await customerService.update(id, req.body as Partial<Customer>);
+      if (!updatedCustomer) {
+         res.status(404).json({ message: "Customer not found" });
+         return
+      }
+      res.json(updatedCustomer);
+    } catch (error) {
+      res.status(400).json({ message: "Error updating customer", error });
     }
-    res.json(updatedCostumer);
   }
 
-  async delete(req: Request, res: Response) {
+  async delete(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
     if (!id) {
-      return res.status(400).json({ message: "Missing costumer id" });
+      res.status(400).json({ message: "Missing customer ID" });
+      return;
     }
-    const deleted = await costumerService.delete(id);
-    if (!deleted) {
-      return res.status(404).json({ message: "Costumer not found" });
+    try {
+      const deleted = await customerService.delete(id);
+      if (!deleted) {
+         res.status(404).json({ message: "Customer not found" });
+         return;
+      }
+      res.json({ message: "Customer deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting customer", error });
     }
-    res.json({ message: "Costumer deleted successfully" });
   }
 }
 
-export default new CostumerController()
+export default new CustomerController();

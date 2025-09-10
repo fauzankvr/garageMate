@@ -1,13 +1,25 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-const ServicesSchema = new Schema({
-  warranty: { type: String, required: true },
-  status: { type: Boolean, required: true, default: true },
-  price: { type: Number, required: true },
-  serviceName: { type: String, required: true },
-  description: { type: String, required: true },
-});
+interface Service extends Document {
+  warranty: string;
+  status: boolean;
+  price: number;
+  serviceName: string;
+  description: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
-const Services = mongoose.model('Services', ServicesSchema);
+const ServiceSchema = new Schema<Service>(
+  {
+    warranty: { type: String, required: true },
+    status: { type: Boolean, required: true, default: true },
+    price: { type: Number, required: true },
+    serviceName: { type: String, required: true },
+    description: { type: String, required: true },
+  },
+  { timestamps: true }
+);
 
-export default Services;
+export const ServiceModel = mongoose.model<Service>("Service", ServiceSchema);
+export type { Service };

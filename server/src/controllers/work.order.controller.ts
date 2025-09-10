@@ -1,44 +1,144 @@
-import e from "express";
+import { Request, Response } from "express";
 import workOrderService from "../services/work.order.service";
-import type { Request, Response } from "express";
+import { WorkOrder } from "../models/work.order.model";
 
 class WorkOrderController {
-    async create(req: Request, res: Response) {
-        try {
-            const data = req.body;
-            console.log("Creating work order with data:", data);
-            const workOrder = await workOrderService.create(data);
-
-            res.status(201).json({
-                success: true,
-                message: "Work Order created successfully",
-                data:  workOrder
-            })
-        } catch (error) {
-            console.error("Error creating workorder:", error);
-            res.status(500).json({
-                success: false,
-                message: "Failed to create workorder",
-            });
-        }
+  // Create a new work order
+  async create(req: Request, res: Response): Promise<void> {
+    try {
+      const data = req.body as WorkOrder;
+      console.log("Creating work order with data:", data);
+      const workOrder = await workOrderService.create(data);
+      res.status(201).json({
+        success: true,
+        message: "Work order created successfully",
+        data: workOrder,
+      });
+    } catch (error) {
+      console.error("Error creating work order:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to create work order",
+      });
     }
+  }
 
-    async getAll(req: Request, res: Response) {
-        try {
-            const workOrders = await workOrderService.findAll();
-
-            res.status(200).json({
-                sucess: true,
-                data: workOrders,
-            })
-        } catch (error) {
-            console.error("Error fetching worke Orders", error);
-            res.status(500).json({
-                success: false,
-                message: "Failed to fetch work orders"
-            })
-        }
+  // Get all work orders
+  async getAll(req: Request, res: Response): Promise<void> {
+    try {
+      const workOrders = await workOrderService.findAll();
+      res.status(200).json({
+        success: true,
+        data: workOrders,
+      });
+    } catch (error) {
+      console.error("Error fetching work orders:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch work orders",
+      });
     }
+  }
+
+  // Get work order by ID
+  async getById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      if (!id) {
+         res.status(400).json({
+          success: false,
+          message: "Missing work order ID",
+         });
+          return;
+      }
+      const workOrder = await workOrderService.findById(id);
+      if (!workOrder) {
+         res.status(404).json({
+          success: false,
+          message: "Work order not found",
+         });
+          return;
+      }
+      res.status(200).json({
+        success: true,
+        data: workOrder,
+      });
+    } catch (error) {
+      console.error("Error fetching work order:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch work order",
+      });
+    }
+  }
+
+  // Update a work order
+  async update(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      if (!id) {
+         res.status(400).json({
+          success: false,
+          message: "Missing work order ID",
+         });
+          return;
+      }
+      const updatedWorkOrder = await workOrderService.update(
+        id,
+        req.body as Partial<WorkOrder>
+      );
+      if (!updatedWorkOrder) {
+         res.status(404).json({
+          success: false,
+          message: "Work order not found",
+         });
+          return;
+      }
+      res.status(200).json({
+        success: true,
+        message: "Work order updated successfully",
+        data: updatedWorkOrder,
+      });
+    } catch (error) {
+      console.error("Error updating work order:", error);
+      res.status(400).json({
+        success: false,
+        message: "Failed to update work order",
+      });
+    }
+  }
+
+  // Delete a work order
+  async delete(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      if (!id) {
+         res.status(400).json({
+          success: false,
+          message: "Missing work order ID",
+        });
+
+      }
+      const deleted = await workOrderService.delete(id);
+      if (!deleted) {
+         res.status(404).json({
+          success: false,
+          message: "Work order not found",
+        });
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        message: "Work order deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting work order:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to delete work order",
+      });
+    }
+  }
 }
 
 export default new WorkOrderController();

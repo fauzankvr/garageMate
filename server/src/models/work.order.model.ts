@@ -1,15 +1,42 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-const WorkOrderSchema = new Schema ({
-    vehicleId: { type: Schema.Types.ObjectId, required: true, ref: "Vehicles" },
-    costumerId: { type: Schema.Types.ObjectId, required: true, ref: "Costumer" },
-    productsUsed: [{ type: Schema.Types.ObjectId, required: true, ref: "Product" }],
-    servicesUsed: [{ type: Schema.Types.ObjectId, required: true, ref: "Services" }],
+interface WorkOrder extends Document {
+  customerId: mongoose.Types.ObjectId;
+  vehicleId: mongoose.Types.ObjectId;
+  services: mongoose.Types.ObjectId[];
+  products: mongoose.Types.ObjectId[];
+  totalProductCost: number;
+  totalServiceCharge: number;
+  totalAmount: number;
+  status: "pending" | "in-progress" | "completed" | "cancelled";
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+const WorkOrderSchema = new Schema<WorkOrder>(
+  {
+    customerId: {
+      type: Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true,
+    },
+    vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle", required: true },
+    services: [{ type: Schema.Types.ObjectId, ref: "Service", required: true }],
+    products: [{ type: Schema.Types.ObjectId, ref: "Product", required: true }],
     totalProductCost: { type: Number, required: true },
     totalServiceCharge: { type: Number, required: true },
-    totalAmount: { type: Number, required: true }
-})
+    totalAmount: { type: Number, required: true },
+    status: {
+      type: String,
+      enum: ["pending", "in-progress", "completed", "cancelled"],
+      default: "pending",
+    },
+  },
+  { timestamps: true }
+);
 
-const WorkOrder = mongoose.model("WorkOrder", WorkOrderSchema);
-
-export default WorkOrder;
+export const WorkOrderModel = mongoose.model<WorkOrder>(
+  "WorkOrder",
+  WorkOrderSchema
+);
+export type { WorkOrder };

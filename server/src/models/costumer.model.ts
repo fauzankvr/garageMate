@@ -1,12 +1,26 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-const CostumerSchema = new Schema({
-  phone: { type: String, required: true, unique: true },
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  // vehicle: [{ type: Schema.Types.ObjectId, required: true,  }],
-});
+interface Customer extends Document {
+  phone: string;
+  name: string;
+  email: string;
+  vehicles: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
-const Costumer = mongoose.model('Costumer', CostumerSchema);
+const CustomerSchema = new Schema<Customer>(
+  {
+    phone: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    vehicles: [{ type: Schema.Types.ObjectId, ref: "Vehicle" }],
+  },
+  { timestamps: true }
+);
 
-export default Costumer;
+export const CustomerModel = mongoose.model<Customer>(
+  "Customer",
+  CustomerSchema
+);
+export type { Customer };
