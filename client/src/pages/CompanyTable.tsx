@@ -11,7 +11,7 @@ const CompanyTable = () => {
     setCompanies(companies.filter((company) => company.id !== id));
   };
 
-  const handleEdit = (id: number) => {
+  const handleEdit = () => {
     alert(`Edit company with ID: {id}`);
   };
 
@@ -32,7 +32,7 @@ const CompanyTable = () => {
             </tr>
           </thead>
           <tbody>
-            {companies.map((company, index) => (
+            {companies.map((company) => (
               <tr
                 key={company.id}
                 className={`text-gray-700 {
@@ -65,7 +65,7 @@ const CompanyTable = () => {
                   <div className="flex items-center space-x-2">
                     <button
                       type="button"
-                      onClick={() => handleEdit(company.id)}
+                      onClick={() => handleEdit()}
                       className="text-black hover:underline flex items-center gap-1"
                     >
                       <Edit2 className="w-3 h-3 text-blue-600 " /> Edit

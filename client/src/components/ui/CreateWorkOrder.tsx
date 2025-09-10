@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, Plus, User, Car, Package } from 'lucide-react';
+import { Search, X, Plus, User, Car } from 'lucide-react';
 import instance from '../../axios/axios';
-import { toast } from 'react-toastify';
+// import { toast } from 'react-toastify';
 
 // Type definitions
 interface Customer {

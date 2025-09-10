@@ -5,6 +5,36 @@ import Table from "../components/ui/Table";
 import Sidebar from "../components/layout/Sidebar";
 import ProductForm from "../components/ui/ProductForm";
 import InputField from "../components/common/input/input";
+import type { Product } from "../types/Products";
+
+
+// Define the Field interface
+interface Field {
+  name: string;
+  label: string;
+  type: "text" | "textarea" | "select" | "number";
+  placeholder: string;
+  value: string;
+  options?: { label: string; value: string }[];
+}
+
+// Define the return type of useProduct hook
+interface UseProductReturn {
+  products: Product[];
+  headers: string[];
+  fetchProducts: () => Promise<void>;
+  prepareEdit: (product: Product) => void;
+  handleDelete: (product: Product) => Promise<void>;
+  editFields: Field[];
+  handleEditInputChange: (
+    index: number,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => void;
+  handleEditSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  setProduct: React.Dispatch<React.SetStateAction<Product[]>>;
+}
 
 const Products = () => {
   const {
@@ -17,15 +47,15 @@ const Products = () => {
     handleEditInputChange,
     handleEditSubmit,
     setProduct,
-  } = useProduct();
+  } = useProduct() as UseProductReturn;
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  const onEdit = (item) => {
+  const onEdit = (item: Product) => {
     prepareEdit(item);
     setIsModalOpen(true);
   };
@@ -34,29 +64,32 @@ const Products = () => {
     setIsModalOpen(false);
   };
 
-  const data = products.map((item) => [
-    item.productName,
-    item.description,
-    item.price,
-    item.sku,
-    item.category,
-    item.brand,
-    <div className="space-x-2">
-      <button
-        onClick={() => onEdit(item)}
-        className="text-blue-500 hover:underline"
-      >
-        Edit
-      </button>
-      <span className="text-gray-400">|</span>
-      <button
-        onClick={() => handleDelete(item)}
-        className="text-red-500 hover:underline"
-      >
-        Delete
-      </button>
-    </div>,
-  ]);
+  const data = products.map(
+    (item: Product) =>
+      [
+        item.productName,
+        item.description,
+        item.price.toString(), // Convert to string for display
+        item.sku,
+        item.category,
+        item.brand,
+        <div className="space-x-2" key={`${item.sku}-actions`}>
+          <button
+            onClick={() => onEdit(item)}
+            className="text-blue-500 hover:underline"
+          >
+            Edit
+          </button>
+          <span className="text-gray-400">|</span>
+          <button
+            onClick={() => handleDelete(item)}
+            className="text-red-500 hover:underline"
+          >
+            Delete
+          </button>
+        </div>,
+      ] as (string | number )[]
+  );
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -83,7 +116,7 @@ const Products = () => {
                     <label className="block text-sm font-medium text-gray-600 mb-1">
                       {field.label}
                     </label>
-                    {field.name === "description" ? (
+                    {field.type === "textarea" ? (
                       <textarea
                         name={field.name}
                         value={field.value}

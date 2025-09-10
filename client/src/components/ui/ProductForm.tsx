@@ -1,6 +1,17 @@
-import {  useState } from "react";
+import { useState } from "react";
 import instance from "../../axios/axios";
+import type { Product } from "../../types/Products";
 
+// Define the Product type (based on what the API returns)
+// interface Product {
+//   productName: string;
+//   price: number;
+//   description: string;
+//   brand: string;
+//   // Add other fields as needed
+// }
+
+// Define the Field interface
 interface Field {
   name: string;
   label: string;
@@ -10,31 +21,36 @@ interface Field {
   options?: { label: string; value: string }[];
 }
 
-const ProductForm = ({setProduct}) => {
+// Define the Props interface for ProductForm
+interface ProductFormProps {
+  setProduct: React.Dispatch<React.SetStateAction<Product[]>>;
+}
+
+const ProductForm = ({ setProduct }: ProductFormProps) => {
   const [fields, setFields] = useState<Field[]>([
     {
-      name: "productName", // ✅ match API
+      name: "productName",
       label: "Product Name",
       type: "text",
       placeholder: "Enter product name",
       value: "",
     },
     {
-      name: "price", // ✅ match API
+      name: "price",
       label: "Product Price",
       type: "text",
       placeholder: "Enter product price",
       value: "",
     },
     {
-      name: "description", // ✅ match API
+      name: "description",
       label: "Product Description",
       type: "textarea",
       placeholder: "Enter product description",
       value: "",
     },
     {
-      name: "brand", // ✅ match API
+      name: "brand",
       label: "Product Brand",
       type: "text",
       placeholder: "Enter product brand",
@@ -44,7 +60,9 @@ const ProductForm = ({setProduct}) => {
 
   const handleInputChange = (
     index: number,
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const value = e.target.value;
     setFields((prev) => {
@@ -70,7 +88,7 @@ const ProductForm = ({setProduct}) => {
 
     try {
       const res = await instance.post("/api/product", data);
-     setProduct((prev) => [...prev, res.data]);
+      setProduct((prev: Product[]) => [...prev, res.data]);
       console.log("✅ Product created:", res.data);
     } catch (err) {
       console.error("❌ Error creating product:", err);

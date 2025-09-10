@@ -11,43 +11,43 @@ const WorkOrders = () => {
 
 
   const {  
-    orders, 
-headers,
+    // orders, 
+// headers,
 
 fetchData}=useOrder()
   useEffect(() => {
     fetchData();
   }, []);
 
-  const handleViewDetails = (item: any) => {
-    alert(`View details for: ${item.serviceName}`);
-  };
+  // const handleViewDetails = (item: any) => {
+  //   alert(`View details for: ${item.serviceName}`);
+  // };
 
-  const data = orders.map((item) => [
-  item.serviceName,
-  item.vehicleInfo,
-  item.customerName,
-  item.phone,
-  item.totalCost,
-  <span
-    className={`px-3 py-1 rounded-full text-xs font-medium
-      ${
-        item.status === "Pending"
-          ? "bg-yellow-100 text-yellow-700"
-          : item.status === "Progress"
-          ? "bg-blue-100 text-blue-700"
-          : "bg-green-100 text-green-700"
-      }`}
-  >
-    {item.status}
-  </span>,
-  <button
-    onClick={() => handleViewDetails(item)} 
-    className="text-blue-500 hover:underline"
-  >
-    View Details
-  </button>
-]);
+//   const data = orders.map((item) => [
+//   item.serviceName,
+//   item.vehicleInfo,
+//   item.customerName,
+//   item.phone,
+//   item.totalCost,
+//   <span
+//     className={`px-3 py-1 rounded-full text-xs font-medium
+//       ${
+//         item.status === "Pending"
+//           ? "bg-yellow-100 text-yellow-700"
+//           : item.status === "Progress"
+//           ? "bg-blue-100 text-blue-700"
+//           : "bg-green-100 text-green-700"
+//       }`}
+//   >
+//     {item.status}
+//   </span>,
+//   <button
+//     onClick={() => handleViewDetails(item)} 
+//     className="text-blue-500 hover:underline"
+//   >
+//     View Details
+//   </button>
+// ]);
 
   return (
     <div className="flex min-h-screen bg-gray-100">

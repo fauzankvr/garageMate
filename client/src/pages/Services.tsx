@@ -29,7 +29,7 @@ const Services = () => {
   }, []);
 
   // Modified to open modal and prepare fields
-  const onEdit = (item) => {
+  const onEdit = (item:any) => {
     prepareEdit(item); // Populates editFields in useService
     setIsModalOpen(true); // Open the modal
   };
@@ -40,7 +40,7 @@ const Services = () => {
   };
 
   // Handle form submission for editing
-  const onSubmitEdit = (e) => {
+  const onSubmitEdit = (e:any) => {
     e.preventDefault();
     handleEditSubmit(e); // Updates the backend
     closeModal(); // Close modal after saving

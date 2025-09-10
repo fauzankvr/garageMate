@@ -6,22 +6,53 @@ import BillTable from "../components/ui/BillTable";
 import SearchBar from "../components/common/search/SearchBar";
 import jsPDF from "jspdf";
 
-const Billing = () => {
-  const { fields, handleSubmit, handleInputChange } = useBill();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("CASH");
-  const [billData, setBillData] = useState(null);
+// Define the Field interface
+interface Field {
+  name: string;
+  label: string;
+  type: "text" | "textarea" | "select" | "number";
+  placeholder: string;
+  value: string;
+  options?: { label: string; value: string }[];
+}
 
-  const handlePaymentMethod = (method) => {
+// Define the BillData interface
+interface BillData {
+  [key: string]: string | number; // Dynamic keys for form fields
+  paymentMethod: string;
+}
+
+// Define the return type of useBill hook
+interface UseBillReturn {
+  fields: Field[];
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  handleInputChange: (
+    index: number,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => void;
+}
+
+const Billing = () => {
+  const { fields, handleSubmit, handleInputChange } =
+    useBill() as UseBillReturn;
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "UPI">("CASH");
+  const [billData, setBillData] = useState<BillData | null>(null);
+
+  const handlePaymentMethod = (method: "CASH" | "UPI") => {
     setPaymentMethod(method);
   };
 
-  const onPrintBill = (e) => {
+  const onPrintBill = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = fields.reduce((acc, field) => {
-      acc[field.name] = field.value;
+      acc[field.name] = field.name.includes("Amount")
+        ? Number(field.value) || 0
+        : field.value;
       return acc;
-    }, {});
+    }, {} as BillData);
     formData.paymentMethod = paymentMethod;
     setBillData(formData);
     setIsModalOpen(true);
@@ -32,10 +63,10 @@ const Billing = () => {
     setBillData(null);
   };
 
-  const confirmAndSubmit = async (e) => {
+  const confirmAndSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     try {
-      await handleSubmit(e); // Submit to backend
+      await handleSubmit(new Event("submit") as unknown as React.FormEvent<HTMLFormElement>); // Submit to backend
       closeModal();
     } catch (error) {
       console.error("Error submitting bill:", error);
@@ -100,15 +131,15 @@ const Billing = () => {
     doc.text("Amount", 160, y + 5);
     doc.line(20, y + 7, 190, y + 7); // Separator line
 
-    // Service Details (Assumed as line items)
+    // Service Details
     y += 10;
     const serviceFields = fields.slice(4, 8);
     serviceFields.forEach((field, index) => {
       doc.text(field.label, 25, y);
-      doc.text("1", 90, y); // Assuming quantity as 1 for each service
-      doc.text(fields.slice(8)[index]?.value || "0.00", 130, y); // Rate from Price Details
-      const amount = fields.slice(8)[index]?.value || "0.00"; // Amount
-      doc.text(amount, 160, y);
+      doc.text("1", 90, y); // Assuming quantity as 1
+      const rate = fields.slice(8)[index]?.value || "0.00";
+      doc.text(rate.toString(), 130, y);
+      doc.text(rate.toString(), 160, y); // Amount same as rate for simplicity
       y += 7;
     });
 
@@ -132,24 +163,25 @@ const Billing = () => {
       "Thank you for your business! Visit us at www.garagemate.com",
       20,
       y,
-      {
-        align: "center",
-      }
+      { align: "center" }
     );
 
     // Save or Open PDF
     const pdfDataUri = doc.output("datauristring");
+    const customerName = billData?.customerName?.toString() || "bill";
     if (window.location.href.includes("print")) {
-      doc.save(`invoice_${billData.customerName || "bill"}.pdf`);
+      doc.save(`invoice_${customerName}.pdf`);
     } else {
       const newWindow = window.open();
-      newWindow.document.write(`
-        <html>
-          <body onload="window.print();window.close()">
-            <iframe src="${pdfDataUri}" style="width: 100%; height: 100%; border: none;"></iframe>
-          </body>
-        </html>
-      `);
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <body onload="window.print();window.close()">
+              <iframe src="${pdfDataUri}" style="width: 100%; height: 100%; border: none;"></iframe>
+            </body>
+          </html>
+        `);
+      }
     }
   };
 

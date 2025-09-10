@@ -6,7 +6,7 @@ import {
   PlusCircle,
 
   UserSquare2,
-  Percent,
+  // Percent,
   ClipboardList,
 } from "lucide-react";
 import { AiFillProduct } from "react-icons/ai";
