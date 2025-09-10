@@ -58,7 +58,7 @@ class CustomerController {
 
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const newCustomer = await customerService.create(req.body as Customer);
+      const newCustomer = await customerService.create(req.body);
       res.status(201).json(newCustomer);
     } catch (error) {
       res.status(400).json({ message: "Error creating customer", error });

@@ -13,7 +13,7 @@ class ServiceController {
   async create(req: Request, res: Response): Promise<void> {
     try {
       console.log("req.body", req.body);
-      const newService = await servicesService.create(req.body as Service);
+      const newService = await servicesService.create(req.body);
       res.status(201).json(newService);
     } catch (error) {
       res.status(400).json({ message: "Error creating service", error });
