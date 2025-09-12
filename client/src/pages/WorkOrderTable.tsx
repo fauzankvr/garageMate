@@ -186,7 +186,7 @@ const WorkOrderTable = () => {
         3: { halign: "left", cellWidth: 40 }, // Amount
       },
       margin: { left: 14, right: 14 },
-      didDrawPage: (data) => {
+      didDrawPage: () => {
         // Add footer
         doc.setFontSize(8);
         doc.setFont("helvetica", "italic");
