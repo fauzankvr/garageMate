@@ -70,10 +70,10 @@ const Products = () => {
         item.productName,
         item.description,
         item.price.toString(), // Convert to string for display
-        item.sku,
-        item.category,
+        // item.sku,
+        // item.category,
         item.brand,
-        <div className="space-x-2" key={`${item.sku}-actions`}>
+        <div className="space-x-2" key={`${item._id}-actions`}>
           <button
             onClick={() => onEdit(item)}
             className="text-blue-500 hover:underline"

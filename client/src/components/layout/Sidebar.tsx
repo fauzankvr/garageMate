@@ -30,7 +30,12 @@ const Sidebar = () => {
 
   return (
     <div className="sticky top-0 h-screen w-56 bg-gray-50 border-r border-gray-200 p-4 flex flex-col sidebar">
-      <h1 className="text-lg font-bold mb-8 text-center" onClick={()=>navigate('/')}>Garage Mate</h1>
+      <h1
+        className="text-lg font-bold mb-8 text-center"
+        onClick={() => navigate("/")}
+      >
+        OZON
+      </h1>
       <nav className="flex flex-col space-y-2">
         {menuItems.map((item, index) => (
           <NavLink

@@ -27,6 +27,7 @@ class WorkOrderController {
   async getAll(req: Request, res: Response): Promise<void> {
     try {
       const workOrders = await workOrderService.findAll();
+      console.log(workOrders);
       res.status(200).json({
         success: true,
         data: workOrders,

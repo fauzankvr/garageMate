@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface Vehicle {
   model: string;
-  year: number;
+  year: string;
   brand: string;
   registration_number: string;
   customerId: mongoose.Types.ObjectId;
@@ -13,7 +13,7 @@ export interface Vehicle {
 const VehicleSchema = new Schema<Vehicle>(
   {
     model: { type: String, required: true },
-    year: { type: Number, required: true },
+    year: { type: String, required: true },
     brand: { type: String, required: true },
     registration_number: { type: String, required: true, unique: true },
     customerId: {

@@ -8,6 +8,7 @@ class VehicleController {
   async create(req: Request, res: Response): Promise<void> {
     try {
       const data = req.body as Vehicle;
+      console.log(data)
       const vehicle = await vehicleService.create(data);
       res.status(201).json({
         success: true,

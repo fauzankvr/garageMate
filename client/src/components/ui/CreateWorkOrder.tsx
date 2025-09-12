@@ -1,26 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Search, X, Plus, User, Car } from 'lucide-react';
-import instance from '../../axios/axios';
-// import { toast } from 'react-toastify';
+import React, { useState, useEffect } from "react";
+import { Search, X, Plus, User, Car } from "lucide-react";
+import instance from "../../axios/axios";
 
 // Type definitions
-interface Customer {
+export interface Customer {
   _id: string;
   phone: string;
   name: string;
   email: string;
 }
 
-interface Vehicle {
+export interface Vehicle {
   _id: string;
   model: string;
   year: string;
   brand: string;
   registration_number: string;
-  costumerId: string;
+  customerId: string;
 }
 
-interface Service {
+export interface Service {
   _id: string;
   warranty: string;
   status: boolean;
@@ -29,79 +28,90 @@ interface Service {
   description: string;
 }
 
-interface Product {
+export interface Product {
   _id: string;
   productName: string;
   price: number;
   quantity?: number;
 }
 
-interface ExtraCharge {
+export interface ServiceCharge {
   description: string;
-  amount: number;
+  price: number;
   for: string;
 }
 
-interface NewCustomer {
+export interface NewCustomer {
   name: string;
   phone: string;
   email: string;
 }
 
-interface NewVehicle {
+export interface NewVehicle {
   model: string;
   year: string;
   brand: string;
   registration_number: string;
 }
 
-interface WorkOrderData {
-  costumerId: string;
+export interface WorkOrderData {
+  customerId: string;
   vehicleId: string;
-  serviceId?: string;
-  productId: string[];
-  extraCharges: ExtraCharge[];
+  services: string[];
+  products: string[];
+  serviceCharges: ServiceCharge[];
   totalServiceCharge: number;
   totalProductCost: number;
   totalAmount: number;
+  status: "pending" | "in-progress" | "completed" | "cancelled";
 }
 
 // Create axios instance
-// Add response interceptor for error handling
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('Api Error:', error.response?.data || error.message);
+    console.error("Api Error:", error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
 
 const WorkOrderCreator: React.FC = () => {
   // Main state
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [serviceCharges, setServiceCharges] = useState<ServiceCharge[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
-  
+
   // Search and dropdown states
-  const [phoneSearch, setPhoneSearch] = useState<string>('');
+  const [phoneSearch, setPhoneSearch] = useState<string>("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  
+
   // Modal states
   const [showCustomerModal, setShowCustomerModal] = useState<boolean>(false);
   const [showVehicleModal, setShowVehicleModal] = useState<boolean>(false);
-  
+
   // Loading states
   const [loadingCustomers, setLoadingCustomers] = useState<boolean>(false);
   const [loadingVehicles, setLoadingVehicles] = useState<boolean>(false);
-  
+
   // Form states for modals
-  const [newCustomer, setNewCustomer] = useState<NewCustomer>({ name: '', phone: '', email: '' });
-  const [newVehicle, setNewVehicle] = useState<NewVehicle>({ model: '', year: '', brand: '', registration_number: '' });
+  const [newCustomer, setNewCustomer] = useState<NewCustomer>({
+    name: "",
+    phone: "",
+    email: "",
+  });
+  const [newVehicle, setNewVehicle] = useState<NewVehicle>({
+    model: "",
+    year: "",
+    brand: "",
+    registration_number: "",
+  });
 
   // Fetch services and products on component mount
   useEffect(() => {
@@ -112,29 +122,34 @@ const WorkOrderCreator: React.FC = () => {
   // API calls
   const searchCustomerByPhone = async (phone: string): Promise<void> => {
     if (phone.length < 10) {
-    
-      return 
-    };
+      return;
+    }
     setLoadingCustomers(true);
     try {
-      const response = await instance.get<Customer[]>(`/api/customer?phone=${phone}`);
+      const response = await instance.get<Customer[]>(
+        `/api/customer?phone=${phone}`
+      );
       setCustomers(response.data);
     } catch (error) {
-      console.error('Error searching customers:', error);
+      console.error("Error searching customers:", error);
     } finally {
       setLoadingCustomers(false);
     }
   };
 
-  const fetchVehiclesByCustomerId = async (customerId: string): Promise<void> => {
+  const fetchVehiclesByCustomerId = async (
+    customerId: string
+  ): Promise<void> => {
     setLoadingVehicles(true);
     try {
-      const response = await instance.get(`/api/vehicle?costomerId=${customerId}`);
+      const response = await instance.get(
+        `/api/vehicle?customerId=${customerId}`
+      );
       const vehicles = response.data.data;
-      console.log('Fetched vehicles:', vehicles);
+      console.log("Fetched vehicles:", vehicles);
       setVehicles(vehicles);
     } catch (error) {
-      console.error('Error fetching vehicles:', error);
+      console.error("Error fetching vehicles:", error);
     } finally {
       setLoadingVehicles(false);
     }
@@ -142,81 +157,98 @@ const WorkOrderCreator: React.FC = () => {
 
   const fetchServices = async (): Promise<void> => {
     try {
-      const response = await instance.get<Service[]>('/api/service');
+      const response = await instance.get<Service[]>("/api/service");
       setServices(response.data);
     } catch (error) {
-      console.error('Error fetching services:', error);
+      console.error("Error fetching services:", error);
     }
   };
 
   const fetchProducts = async (): Promise<void> => {
     try {
-      const response = await instance.get<Product[]>('/api/product');
-      console.log('Fetched products:', response.data);
+      const response = await instance.get<Product[]>("/api/product");
+      console.log("Fetched products:", response.data);
       setProducts(response.data);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error("Error fetching products:", error);
     }
   };
 
   const createCustomer = async (): Promise<void> => {
     try {
-      const response = await instance.post<Customer>('/api/customer', newCustomer);
+      const response = await instance.post<Customer>(
+        "/api/customer",
+        newCustomer
+      );
       setSelectedCustomer(response.data);
       setShowCustomerModal(false);
-      setNewCustomer({ name: '', phone: '', email: '' });
+      setNewCustomer({ name: "", phone: "", email: "" });
     } catch (error) {
-      console.error('Error creating customer:', error);
+      console.error("Error creating customer:", error);
     }
   };
 
   const createVehicle = async (): Promise<void> => {
     if (!selectedCustomer) return;
     try {
-      const vehicleData = { ...newVehicle, costumerId: selectedCustomer._id };
-      const response = await instance.post<Vehicle>('/api/vehicle', vehicleData);
-      console.log(response.data)
+      const vehicleData = { ...newVehicle, customerId: selectedCustomer._id };
+      const response = await instance.post<Vehicle>(
+        "/api/vehicle",
+        vehicleData
+      );
+      console.log(response.data);
       setSelectedVehicle(response.data);
       setVehicles([...vehicles, response.data]);
       setShowVehicleModal(false);
-      setNewVehicle({ model: '', year: '', brand: '', registration_number: '' });
+      setNewVehicle({
+        model: "",
+        year: "",
+        brand: "",
+        registration_number: "",
+      });
     } catch (error) {
-      console.error('Error creating vehicle:', error);
+      console.error("Error creating vehicle:", error);
     }
   };
 
   const createWorkOrder = async (): Promise<void> => {
     if (!selectedCustomer || !selectedVehicle) return;
 
+    // Validate serviceCharges
+    const validServiceCharges = serviceCharges.filter(
+      (charge) => charge.description && charge.price > 0 && charge.for
+    );
+
     const workOrderData: WorkOrderData = {
-      costumerId: selectedCustomer._id,
+      customerId: selectedCustomer._id,
       vehicleId: selectedVehicle._id,
-      serviceId: selectedService?._id,
-      productId: selectedProducts.map(p => p._id),
-      extraCharges,
+      services: selectedServices.map((s) => s._id),
+      products: selectedProducts.map((p) => p._id),
+      serviceCharges: validServiceCharges,
       totalServiceCharge: calculateServiceTotal(),
       totalProductCost: calculateProductTotal(),
-      totalAmount: calculateGrandTotal()
+      totalAmount: calculateGrandTotal(),
+      status: "pending",
     };
 
     try {
-      const response = await instance.post('/api/work-order', workOrderData);
-      console.log(response);
-      alert('Work Order created successfully!');
+      const response = await instance.post("/api/work-order", workOrderData);
+      console.log("Work order created:", response.data);
+      alert("Work Order created successfully!");
       resetForm();
     } catch (error) {
-      console.error('Error creating work order:', error);
-        alert('Error creating work order');
+      console.error("Error creating work order:", error);
+      alert("Error creating work order");
     }
   };
 
   const resetForm = (): void => {
     setSelectedCustomer(null);
     setSelectedVehicle(null);
-    setSelectedService(null);
+    setSelectedServices([]);
+    setServiceCharges([]);
     setSelectedProducts([]);
-    setExtraCharges([]);
-    setPhoneSearch('');
+    setPhoneSearch("");
     setVehicles([]);
   };
 
@@ -224,7 +256,7 @@ const WorkOrderCreator: React.FC = () => {
   const handleCustomerSelect = (customer: Customer): void => {
     setSelectedCustomer(customer);
     setCustomers([]);
-    setPhoneSearch('');
+    setPhoneSearch("");
     fetchVehiclesByCustomerId(customer._id);
   };
 
@@ -233,56 +265,82 @@ const WorkOrderCreator: React.FC = () => {
   };
 
   const handleServiceSelect = (service: Service): void => {
-    setSelectedService(service);
-  };
-
-  const addExtraCharge = (): void => {
-    if (extraCharges.length < 2) {
-      setExtraCharges([...extraCharges, { description: '', amount: 0, for: '' }]);
+    if (!selectedServices.find((s) => s._id === service._id)) {
+      setSelectedServices([...selectedServices, service]);
     }
   };
 
-  const updateExtraCharge = (index: number, field: keyof ExtraCharge, value: string | number): void => {
-    const updated = extraCharges.map((charge, i) => 
+  const removeService = (serviceId: string): void => {
+    setSelectedServices(selectedServices.filter((s) => s._id !== serviceId));
+  };
+
+  const addServiceCharge = (): void => {
+    setServiceCharges([
+      ...serviceCharges,
+      { description: "", price: 0, for: "" },
+    ]);
+  };
+
+  const updateServiceCharge = (
+    index: number,
+    field: keyof ServiceCharge,
+    value: string | number
+  ): void => {
+    const updated = serviceCharges.map((charge, i) =>
       i === index ? { ...charge, [field]: value } : charge
     );
-    setExtraCharges(updated);
+    setServiceCharges(updated);
   };
 
-  const removeExtraCharge = (index: number): void => {
-    setExtraCharges(extraCharges.filter((_, i) => i !== index));
+  const removeServiceCharge = (index: number): void => {
+    setServiceCharges(serviceCharges.filter((_, i) => i !== index));
   };
 
-  const addProduct = (product: Product): void => {
-    const existingIndex = selectedProducts.findIndex(p => p._id === product._id);
+  const addProduct = (product: Product, quantity: number): void => {
+    if (quantity <= 0) return;
+    const existingIndex = selectedProducts.findIndex(
+      (p) => p._id === product._id
+    );
     if (existingIndex >= 0) {
       const updated = [...selectedProducts];
-      updated[existingIndex].quantity = (updated[existingIndex].quantity || 0) + 1;
+      updated[existingIndex].quantity =
+        (updated[existingIndex].quantity || 0) + quantity;
       setSelectedProducts(updated);
     } else {
-      setSelectedProducts([...selectedProducts, { ...product, quantity: 1 }]);
+      setSelectedProducts([...selectedProducts, { ...product, quantity }]);
     }
   };
 
   const updateProductQuantity = (productId: string, quantity: number): void => {
     if (quantity <= 0) {
-      setSelectedProducts(selectedProducts.filter(p => p._id !== productId));
+      setSelectedProducts(selectedProducts.filter((p) => p._id !== productId));
     } else {
-      setSelectedProducts(selectedProducts.map(p => 
-        p._id === productId ? { ...p, quantity } : p
-      ));
+      setSelectedProducts(
+        selectedProducts.map((p) =>
+          p._id === productId ? { ...p, quantity } : p
+        )
+      );
     }
   };
 
   // Calculations
   const calculateServiceTotal = (): number => {
-    const servicePrice = selectedService?.price || 0;
-    const extraTotal = extraCharges.reduce((sum, charge) => sum + (parseFloat(charge.amount.toString()) || 0), 0);
-    return servicePrice + extraTotal;
+    const servicePrice = selectedServices.reduce(
+      (sum, service) => sum + (service.price || 0),
+      0
+    );
+    const chargeTotal = serviceCharges.reduce(
+      (sum, charge) => sum + (charge.price || 0),
+      0
+    );
+    return servicePrice + chargeTotal;
   };
 
   const calculateProductTotal = (): number => {
-    return selectedProducts.reduce((sum, product) => sum + (product.price * (product.quantity || 1)), 0);
+    return selectedProducts.reduce(
+      (sum, product) => sum + product.price * (product.quantity || 1),
+      0
+    );
   };
 
   const calculateGrandTotal = (): number => {
@@ -306,7 +364,6 @@ const WorkOrderCreator: React.FC = () => {
           <h2 className="text-sm font-medium text-gray-700 mb-4">
             Customer & Vehicle Info
           </h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Customer Section */}
             <div>
@@ -462,68 +519,78 @@ const WorkOrderCreator: React.FC = () => {
 
         {/* Service Section */}
         <div className="p-6 bg-gray-100 border-t">
-          <h2 className="text-sm font-medium text-gray-700 mb-4">Service</h2>
+          <h2 className="text-sm font-medium text-gray-700 mb-4">Services</h2>
 
-          {selectedService ? (
-            <div className="bg-white p-3 rounded border relative mb-4">
-              <button
-                onClick={() => setSelectedService(null)}
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={16} />
-              </button>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="font-medium">
-                    Name: {selectedService.serviceName}
+          {selectedServices.length > 0 ? (
+            <div className="mb-4">
+              {selectedServices.map((service) => (
+                <div
+                  key={service._id}
+                  className="bg-white p-3 rounded border relative mb-2"
+                >
+                  <button
+                    onClick={() => removeService(service._id)}
+                    className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={16} />
+                  </button>
+                  <div className="text-sm">
+                    <div className="font-medium">
+                      Name: {service.serviceName}
+                    </div>
+                    <div>Price: ₹{service.price}</div>
+                    <div>Description: {service.description}</div>
                   </div>
-                  <div>Base Price: ₹{selectedService.price}</div>
                 </div>
-                <div>
-                  <div>Charge: ₹{selectedService.price}</div>
-                  <div>For: {selectedService.serviceName}</div>
-                </div>
-              </div>
+              ))}
             </div>
           ) : (
-            <select
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                const service = services.find((s) => s._id === e.target.value);
-                if (service) handleServiceSelect(service);
-              }}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 mb-4"
-              defaultValue=""
-            >
-              <option value="">Select Service</option>
-              {services.map((service) => (
-                <option key={service._id} value={service._id}>
-                  {service.serviceName} - ₹{service.price}
-                </option>
-              ))}
-            </select>
+            <div className="text-sm text-gray-500 mb-4">
+              No services selected
+            </div>
           )}
 
-          {/* Extra Charges */}
+          <select
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+              const service = services.find((s) => s._id === e.target.value);
+              if (service) handleServiceSelect(service);
+              e.target.value = "";
+            }}
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 mb-4"
+            defaultValue=""
+          >
+            <option value="">Select Service</option>
+            {services.map((service) => (
+              <option key={service._id} value={service._id}>
+                {service.serviceName} - ₹{service.price}
+              </option>
+            ))}
+          </select>
+
+          {/* Service Charges */}
           <div className="mb-4">
-            {extraCharges.map((charge, index) => (
+            <h3 className="text-sm font-medium text-gray-700 mb-2">
+              Service Charges
+            </h3>
+            {serviceCharges.map((charge, index) => (
               <div key={index} className="flex gap-2 mb-2">
                 <input
                   type="text"
                   placeholder="Charge Description"
                   value={charge.description}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    updateExtraCharge(index, "description", e.target.value)
+                    updateServiceCharge(index, "description", e.target.value)
                   }
                   className="flex-1 px-3 py-2 border rounded-lg text-sm"
                 />
                 <input
                   type="number"
-                  placeholder="Amount"
-                  value={charge.amount}
+                  placeholder="Price"
+                  value={charge.price}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    updateExtraCharge(
+                    updateServiceCharge(
                       index,
-                      "amount",
+                      "price",
                       parseFloat(e.target.value) || 0
                     )
                   }
@@ -534,12 +601,12 @@ const WorkOrderCreator: React.FC = () => {
                   placeholder="For"
                   value={charge.for}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    updateExtraCharge(index, "for", e.target.value)
+                    updateServiceCharge(index, "for", e.target.value)
                   }
                   className="w-24 px-3 py-2 border rounded-lg text-sm"
                 />
                 <button
-                  onClick={() => removeExtraCharge(index)}
+                  onClick={() => removeServiceCharge(index)}
                   className="px-2 py-2 text-red-500 hover:text-red-700"
                 >
                   <X size={16} />
@@ -547,15 +614,13 @@ const WorkOrderCreator: React.FC = () => {
               </div>
             ))}
 
-            {extraCharges.length < 2 && (
-              <button
-                onClick={addExtraCharge}
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-              >
-                <Plus size={16} className="mr-1" />
-                Add Charge
-              </button>
-            )}
+            <button
+              onClick={addServiceCharge}
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+            >
+              <Plus size={16} className="mr-1" />
+              Add Service Charge
+            </button>
           </div>
 
           <div className="text-sm font-medium">
@@ -567,42 +632,62 @@ const WorkOrderCreator: React.FC = () => {
         <div className="p-6 bg-gray-100 border-t">
           <h2 className="text-sm font-medium text-gray-700 mb-4">Products</h2>
 
-          {selectedProducts.map((product) => (
-            <div
-              key={product._id}
-              className="bg-white p-3 rounded border mb-2 relative"
-            >
-              <button
-                onClick={() => updateProductQuantity(product._id, 0)}
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={16} />
-              </button>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="font-medium">
-                    Product: {product.productName || "Car Wash Shampoo"}
+          {selectedProducts.length > 0 ? (
+            <div className="mb-4">
+              {selectedProducts.map((product) => (
+                <div
+                  key={product._id}
+                  className="bg-white p-3 rounded border mb-2 relative"
+                >
+                  <button
+                    onClick={() => updateProductQuantity(product._id, 0)}
+                    className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={16} />
+                  </button>
+                  <div className="text-sm">
+                    <div className="font-medium">
+                      Product: {product.productName}
+                    </div>
+                    <div>Quantity: {product.quantity}</div>
+                    <div>Price: ₹{product.price}</div>
+                    <div>
+                      Total: ₹
+                      {(product.price * (product.quantity || 1)).toFixed(2)}
+                    </div>
+                    <input
+                      type="number"
+                      value={product.quantity}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        updateProductQuantity(
+                          product._id,
+                          parseInt(e.target.value) || 1
+                        )
+                      }
+                      className="w-20 px-2 py-1 border rounded-lg text-sm mt-2"
+                      min="1"
+                    />
                   </div>
-                  <div>Qty: {product.quantity}</div>
-                  <div>Price: ₹{product.price}</div>
                 </div>
-                <div>
-                  <div>
-                    Product: {product.productName || "Car Wash Shampoo"}
-                  </div>
-                  <div>Qty: {product.quantity}</div>
-                  <div>Price: ₹{product.price}</div>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <div className="text-sm text-gray-500 mb-4">
+              No products selected
+            </div>
+          )}
 
           <div className="flex gap-4 mb-4">
             <select
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                 const product = products.find((p) => p._id === e.target.value);
-                if (product) addProduct(product);
+                const quantityInput = document.getElementById(
+                  "product-quantity"
+                ) as HTMLInputElement;
+                const quantity = parseInt(quantityInput?.value || "1");
+                if (product && quantity > 0) addProduct(product, quantity);
                 e.target.value = "";
+                if (quantityInput) quantityInput.value = "1";
               }}
               className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               defaultValue=""
@@ -616,6 +701,7 @@ const WorkOrderCreator: React.FC = () => {
             </select>
 
             <input
+              id="product-quantity"
               type="number"
               placeholder="Quantity"
               className="w-20 px-3 py-2 border rounded-lg"
@@ -623,7 +709,22 @@ const WorkOrderCreator: React.FC = () => {
               defaultValue="1"
             />
 
-            <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+            <button
+              onClick={() => {
+                const select = document.querySelector(
+                  "select"
+                ) as HTMLSelectElement;
+                const product = products.find((p) => p._id === select.value);
+                const quantityInput = document.getElementById(
+                  "product-quantity"
+                ) as HTMLInputElement;
+                const quantity = parseInt(quantityInput?.value || "1");
+                if (product && quantity > 0) addProduct(product, quantity);
+                select.value = "";
+                if (quantityInput) quantityInput.value = "1";
+              }}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
               Add Product
             </button>
           </div>
@@ -636,7 +737,7 @@ const WorkOrderCreator: React.FC = () => {
         {/* Cost Breakdown */}
         <div className="p-6 bg-gray-50 border-t">
           <h2 className="text-sm font-medium text-gray-700 mb-4">
-            Cost Breakdowns
+            Cost Breakdown
           </h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
@@ -733,7 +834,7 @@ const WorkOrderCreator: React.FC = () => {
 
       {/* Vehicle Modal */}
       {showVehicleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium flex items-center">

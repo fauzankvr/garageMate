@@ -34,6 +34,7 @@ class ProductService {
 
   async create(data: Product): Promise<Product> {
     try {
+      console.log(data)
       const product = new this.productModel(data);
       return await product.save();
     } catch (error) {
