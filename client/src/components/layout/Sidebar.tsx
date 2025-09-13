@@ -10,22 +10,51 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { AiFillProduct } from "react-icons/ai";
+import { FaMoneyBillWave } from "react-icons/fa";
 
 
 
 const Sidebar = () => {
   const navigate=useNavigate()
   const menuItems = [
-    { name: "Dashboard", path: "/dashboard", icon: <Home className="w-5 h-5" /> },
-    { name: "Create Bill", path: "/bill", icon: <PlusCircle className="w-5 h-5" /> },
-    { name: "Work Orders", path: "/orders", icon: <ClipboardList className="w-5 h-5" /> },
-    { name: "Services", path: "/services", icon: <Users className="w-5 h-5" /> },
-    { name: "Products", path: "/products", icon: <AiFillProduct className="w-5 h-5" /> },
+    {
+      name: "Dashboard",
+      path: "/dashboard",
+      icon: <Home className="w-5 h-5" />,
+    },
+    {
+      name: "Create Bill",
+      path: "/bill",
+      icon: <PlusCircle className="w-5 h-5" />,
+    },
+    {
+      name: "Work Orders",
+      path: "/orders",
+      icon: <ClipboardList className="w-5 h-5" />,
+    },
+    {
+      name: "Services",
+      path: "/services",
+      icon: <Users className="w-5 h-5" />,
+    },
+    {
+      name: "Products",
+      path: "/products",
+      icon: <AiFillProduct className="w-5 h-5" />,
+    },
+    {
+  name: "Salarys",
+  path: "/salaries",
+  icon: <FaMoneyBillWave className="w-5 h-5" />, // Better suited for salary
+},
     // { name: "Customer Vehicles", path: "/customer", icon: <Car className="w-5 h-5" /> },
     // { name: "Coupons", path: "/coupen", icon: <Percent className="w-5 h-5" /> },
-    { name: "Employees", path: "/employees", icon: <UserSquare2 className="w-5 h-5" /> },
+    {
+      name: "Employees",
+      path: "/employees",
+      icon: <UserSquare2 className="w-5 h-5" />,
+    },
     // { name: "Appointments", path: "/appointments", icon: <Calendar className="w-5 h-5" /> },
-        
   ];
 
   return (

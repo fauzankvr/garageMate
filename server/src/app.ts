@@ -8,6 +8,8 @@ import serviceRoutes from "./routes/services.routes";
 import productRoutes from "./routes/product.routes";
 import vehicleRoutes from "./routes/vehicle.routes";
 import workOrderRoutes from "./routes/work.routes";
+import employeeRoutes from "./routes/employee.routes";
+import salaryRoutes from "./routes/salary.routes";
 
 dotenv.config();
 
@@ -21,6 +23,8 @@ app.use("/api/service", serviceRoutes);
 app.use("/api/product", productRoutes);
 app.use("/api/work-order", workOrderRoutes);
 app.use("/api/vehicle", vehicleRoutes);
+app.use("/api/employee", employeeRoutes);
+app.use("/api/salaries", salaryRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello, world!");
