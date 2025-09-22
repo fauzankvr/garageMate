@@ -4,6 +4,7 @@ interface Service extends Document {
   warranty: string;
   status: boolean;
   price: number;
+  count: Number;
   serviceName: string;
   description: string;
   createdAt?: Date;
@@ -15,6 +16,7 @@ const ServiceSchema = new Schema<Service>(
     warranty: { type: String, required: true },
     status: { type: Boolean, required: true, default: true },
     price: { type: Number, required: true },
+    count: { type: Number, required: true },
     serviceName: { type: String, required: true },
     description: { type: String, required: true },
   },

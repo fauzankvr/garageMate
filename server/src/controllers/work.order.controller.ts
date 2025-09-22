@@ -1,13 +1,21 @@
 import { Request, Response } from "express";
 import workOrderService from "../services/work.order.service";
 import { WorkOrder } from "../models/work.order.model";
+import vehicleService from "../services/vehicle.service";
 
 class WorkOrderController {
   // Create a new work order
   async create(req: Request, res: Response): Promise<void> {
     try {
       const data = req.body as WorkOrder;
-      console.log("Creating work order with data:", data);
+      if (data.vehicleId) {
+        const vehicle = await vehicleService.findById(data.vehicleId.toString());
+        if(!vehicle || !vehicle._id) throw new Error("Vehicle not found")
+        const id = vehicle._id
+        if(id){
+          await vehicleService.update(id, { serviceCount: vehicle.serviceCount + 1 });
+        }
+      }
       const workOrder = await workOrderService.create(data);
       res.status(201).json({
         success: true,
@@ -27,7 +35,6 @@ class WorkOrderController {
   async getAll(req: Request, res: Response): Promise<void> {
     try {
       const workOrders = await workOrderService.findAll();
-      console.log(workOrders);
       res.status(200).json({
         success: true,
         data: workOrders,

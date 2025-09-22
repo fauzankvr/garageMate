@@ -38,6 +38,7 @@ class ProductService {
       const product = new this.productModel(data);
       return await product.save();
     } catch (error) {
+      console.log(error)
       if (error instanceof Error) {
         throw new Error(`Failed to create product: ${error.message}`);
       } else {

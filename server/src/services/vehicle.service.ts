@@ -16,16 +16,20 @@ class VehicleService {
   async create(data: Vehicle): Promise<Vehicle> {
     try {
       const vehicle = new this.vehicleModel(data);
-      return await vehicle.save();
+      return await vehicle.save(); 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to create vehicle: ${errorMessage}`);
     }
   }
 
-  async findAll(customerId: string): Promise<Vehicle[]> {
+  async findAll(customerId?: string): Promise<Vehicle[]> {
     try {
-      return await this.vehicleModel.find({ customerId }).exec();
+      if (customerId) {
+        return await this.vehicleModel.find({ customerId }).exec();
+      }
+      return await this.vehicleModel.find().exec(); // return all vehicles
     } catch (error) {
       throw new Error(`Failed to fetch vehicles: ${error}`);
     }
@@ -43,9 +47,7 @@ class VehicleService {
     try {
       return await this.vehicleModel.find({ customerId }).exec();
     } catch (error) {
-      throw new Error(
-        `Failed to fetch vehicles by customer ID: ${error}`
-      );
+      throw new Error(`Failed to fetch vehicles by customer ID: ${error}`);
     }
   }
 

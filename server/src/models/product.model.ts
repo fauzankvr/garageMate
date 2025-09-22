@@ -5,7 +5,7 @@ interface Product extends Document {
   description: string;
   price: number;
   // sku: string;
-  // wa: string;
+  stock: Number;
   brand: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -17,7 +17,7 @@ const ProductSchema = new Schema<Product>(
     description: { type: String, required: true },
     price: { type: Number, required: true },
     // sku: { type: String, required: true, unique: true },
-    // category: { type: String, required: true },
+    stock: { type: Number, required: true },
     brand: { type: String, required: true },
   },
   { timestamps: true }
