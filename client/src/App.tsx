@@ -18,6 +18,7 @@ import CreateVehicle from "./pages/CreateVehicle";
 // 🔹 Components
 import Dashboard from "./components/ui/Dashboard";
 import Salaries from "./pages/Salary";
+import Vehicles from "./pages/Vehicle";
 
 const App = () => {
   return (
@@ -39,6 +40,7 @@ const App = () => {
         <Route path="/companies" element={<CompanyTable />} />
         <Route path="/employees" element={<Employees />} />
         <Route path="/salaries" element={<Salaries />} />
+        <Route path="/vehicle" element={<Vehicles/> }/>
 
         {/* Services & Orders */}
         <Route path="/services" element={<Services />} />

@@ -2,21 +2,25 @@ import React from "react";
 
 interface TableProps {
   headers: string[];
-  data: (string | React.ReactNode)[][];
+  data: (string | number | React.ReactNode)[][];
   className?: string;
 }
 
 const Table: React.FC<TableProps> = ({ headers, data, className }) => {
   return (
-<div className={`overflow-x-auto rounded-xl border max-h-[300px] overflow-y-scroll border-gray-200 ${className}`}>
-      <table className="min-w-full text-sm text-gray-700">
+    <div className={`bg-white rounded-lg shadow overflow-x-auto ${className}`}>
+      <table
+        className="min-w-full divide-y divide-gray-200 text-sm text-gray-700"
+        role="table"
+      >
         {/* Table Header */}
-        <thead>
-          <tr className="bg-gray-50 text-gray-500">
+        <thead className="bg-gray-50">
+          <tr className="text-gray-500">
             {headers.map((header, index) => (
               <th
                 key={index}
-                className="sticky top-0 bg-gray-50 scroll-smooth z-10 text-left px-3 py-3 font-medium border-b border-gray-200"
+                scope="col"
+                className="sticky top-0 bg-gray-50 z-10 text-left px-6 py-3 font-medium text-xs uppercase tracking-wider"
               >
                 {header}
               </th>
@@ -25,16 +29,26 @@ const Table: React.FC<TableProps> = ({ headers, data, className }) => {
         </thead>
 
         {/* Table Body */}
-        <tbody>
+        <tbody className="divide-y divide-gray-200">
           {data.length > 0 ? (
             data.map((row, rowIndex) => (
               <tr
-                key={rowIndex}
-                className="hover:bg-gray-50 border-b border-gray-100"
+                key={`row-${rowIndex}`}
+                className="hover:bg-gray-50"
+                role="row"
               >
                 {row.map((cell, cellIndex) => (
-                  <td key={cellIndex} className="px-3 py-3">
-                    {cell}
+                  <td
+                    key={`cell-${rowIndex}-${cellIndex}`}
+                    className="px-6 py-4 whitespace-nowrap"
+                    role="cell"
+                  >
+                    <div
+                      className="truncate max-w-xs"
+                      title={typeof cell === "string" ? cell : undefined}
+                    >
+                      {cell}
+                    </div>
                   </td>
                 ))}
               </tr>
@@ -43,7 +57,8 @@ const Table: React.FC<TableProps> = ({ headers, data, className }) => {
             <tr>
               <td
                 colSpan={headers.length}
-                className="text-center py-4 text-gray-400"
+                className="text-center py-6 text-gray-400"
+                role="cell"
               >
                 No data available
               </td>
@@ -52,7 +67,6 @@ const Table: React.FC<TableProps> = ({ headers, data, className }) => {
         </tbody>
       </table>
     </div>
-
   );
 };
 

@@ -5,4 +5,5 @@ export interface ServiceData {
   price: number;
   warranty: string;
   status: string;
+  count:number
 }

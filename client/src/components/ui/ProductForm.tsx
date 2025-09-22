@@ -2,31 +2,22 @@ import { useState } from "react";
 import instance from "../../axios/axios";
 import type { Product } from "../../types/Products";
 
-// Define the Product type (based on what the API returns)
-// interface Product {
-//   productName: string;
-//   price: number;
-//   description: string;
-//   brand: string;
-//   // Add other fields as needed
-// }
-
 // Define the Field interface
 interface Field {
   name: string;
   label: string;
-  type: "text" | "textarea" | "select";
+  type: "text" | "textarea" | "number";
   placeholder: string;
   value: string;
-  options?: { label: string; value: string }[];
 }
 
 // Define the Props interface for ProductForm
 interface ProductFormProps {
   setProduct: React.Dispatch<React.SetStateAction<Product[]>>;
+  onSuccess?: () => void; // Added to handle modal close
 }
 
-const ProductForm = ({ setProduct }: ProductFormProps) => {
+const ProductForm = ({ setProduct, onSuccess }: ProductFormProps) => {
   const [fields, setFields] = useState<Field[]>([
     {
       name: "productName",
@@ -38,7 +29,7 @@ const ProductForm = ({ setProduct }: ProductFormProps) => {
     {
       name: "price",
       label: "Product Price",
-      type: "text",
+      type: "number",
       placeholder: "Enter product price",
       value: "",
     },
@@ -54,6 +45,13 @@ const ProductForm = ({ setProduct }: ProductFormProps) => {
       label: "Product Brand",
       type: "text",
       placeholder: "Enter product brand",
+      value: "",
+    },
+    {
+      name: "stock",
+      label: "Stock Quantity",
+      type: "number",
+      placeholder: "Enter stock quantity",
       value: "",
     },
   ]);
@@ -75,21 +73,18 @@ const ProductForm = ({ setProduct }: ProductFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data = fields.reduce((acc, field) => {
-      acc[field.name] = field.value;
+      acc[field.name] =
+        field.type === "number" ? Number(field.value) : field.value;
       return acc;
-    }, {} as Record<string, string>);
-
-    // Convert price to number
-    if (data.price) {
-      data.price = Number(data.price) as any;
-    }
-
-    console.log("Payload to API:", data);
+    }, {} as Record<string, string | number>);
 
     try {
       const res = await instance.post("/api/product", data);
       setProduct((prev: Product[]) => [...prev, res.data]);
       console.log("✅ Product created:", res.data);
+      if (onSuccess) onSuccess(); // Call onSuccess to close modal
+      // Reset form
+      setFields(fields.map((field) => ({ ...field, value: "" })));
     } catch (err) {
       console.error("❌ Error creating product:", err);
     }
@@ -98,7 +93,7 @@ const ProductForm = ({ setProduct }: ProductFormProps) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 mx-auto bg-white rounded-2xl mt-5"
+      className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 mx-auto bg-white rounded-2xl"
     >
       {fields.map((field, index) => (
         <div
@@ -108,7 +103,6 @@ const ProductForm = ({ setProduct }: ProductFormProps) => {
           <label className="block mb-1 text-sm font-medium text-gray-700">
             {field.label}
           </label>
-
           {field.type === "textarea" ? (
             <textarea
               value={field.value}
@@ -118,7 +112,7 @@ const ProductForm = ({ setProduct }: ProductFormProps) => {
             />
           ) : (
             <input
-              type="text"
+              type={field.type}
               value={field.value}
               onChange={(e) => handleInputChange(index, e)}
               placeholder={field.placeholder}
@@ -127,7 +121,6 @@ const ProductForm = ({ setProduct }: ProductFormProps) => {
           )}
         </div>
       ))}
-
       <div className="md:col-span-2">
         <button
           type="submit"

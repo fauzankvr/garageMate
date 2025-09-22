@@ -1,21 +1,11 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import {
-  Home,
-  Users,
- 
-  PlusCircle,
-
-  UserSquare2,
-  // Percent,
-  ClipboardList,
-} from "lucide-react";
+import { Home, Users, PlusCircle, UserSquare2, Car } from "lucide-react";
 import { AiFillProduct } from "react-icons/ai";
 import { FaMoneyBillWave } from "react-icons/fa";
 
-
-
 const Sidebar = () => {
-  const navigate=useNavigate()
+  const navigate = useNavigate();
+
   const menuItems = [
     {
       name: "Dashboard",
@@ -24,13 +14,13 @@ const Sidebar = () => {
     },
     {
       name: "Create Bill",
-      path: "/bill",
+      path: "/orders",
       icon: <PlusCircle className="w-5 h-5" />,
     },
     {
-      name: "Work Orders",
-      path: "/orders",
-      icon: <ClipboardList className="w-5 h-5" />,
+      name: "Vehicles",
+      path: "/vehicle",
+      icon: <Car className="w-5 h-5" />,
     },
     {
       name: "Services",
@@ -43,34 +33,34 @@ const Sidebar = () => {
       icon: <AiFillProduct className="w-5 h-5" />,
     },
     {
-  name: "Salarys",
-  path: "/salaries",
-  icon: <FaMoneyBillWave className="w-5 h-5" />, // Better suited for salary
-},
-    // { name: "Customer Vehicles", path: "/customer", icon: <Car className="w-5 h-5" /> },
-    // { name: "Coupons", path: "/coupen", icon: <Percent className="w-5 h-5" /> },
+      name: "Salaries",
+      path: "/salaries",
+      icon: <FaMoneyBillWave className="w-5 h-5" />,
+    },
     {
       name: "Employees",
       path: "/employees",
       icon: <UserSquare2 className="w-5 h-5" />,
     },
-    // { name: "Appointments", path: "/appointments", icon: <Calendar className="w-5 h-5" /> },
   ];
 
   return (
     <div className="sticky top-0 h-screen w-56 bg-gray-50 border-r border-gray-200 p-4 flex flex-col sidebar">
+      {/* Logo / Title */}
       <h1
-        className="text-lg font-bold mb-8 text-center"
+        className="text-lg font-bold mb-8 text-center cursor-pointer"
         onClick={() => navigate("/")}
       >
         OZON
       </h1>
+
+      {/* Navigation Links */}
       <nav className="flex flex-col space-y-2">
         {menuItems.map((item, index) => (
           <NavLink
             key={index}
             to={item.path}
-            end={item.path === "/"}
+            end={item.path === "/dashboard"} // only true for dashboard
             className={({ isActive }) =>
               `flex items-center space-x-3 px-4 py-2 rounded-lg text-sm font-medium transition ${
                 isActive

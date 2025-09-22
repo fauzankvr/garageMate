@@ -10,6 +10,7 @@ const useService = () => {
     "Description",
     "Base Price",
     "Warranty",
+    "Offer Count",
     "Status",
     "Actions",
   ];
@@ -17,14 +18,21 @@ const useService = () => {
   const [services, setServices] = useState<ServiceData[]>([]);
   const [service, setService] = useState<ServiceData>();
   const fetchService = async (id: string) => {
-    const response = await instance.get(`/api/service/${id}`);
-    console.log("service response", response.data);
-    setService(response.data);
+    try {
+      const response = await instance.get(`/api/service/${id}`);
+      setService(response.data);
+    } catch (error) {
+      console.error("Error fetching service:", error);
+    }
   };
+
   const fetchServices = async () => {
-    const response = await instance.get("/api/service");
-    console.log("service response", response.data);
-    setServices(response.data);
+    try {
+      const response = await instance.get("/api/service");
+      setServices(response.data);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+    }
   };
 
   const initialFields = [
@@ -51,9 +59,16 @@ const useService = () => {
     },
     {
       name: "warranty",
-      label: "Service Warranty ",
+      label: "Service Warranty",
       type: "text",
       placeholder: "Enter Service Warranty in months",
+      value: "",
+    },
+    {
+      name: "count",
+      label: "Offer Count",
+      type: "number",
+      placeholder: "Enter offer count",
       value: "",
     },
     {
@@ -72,6 +87,7 @@ const useService = () => {
     newFields[index].value = event.target.value;
     setCreateFields(newFields);
   };
+
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const rawPayload = extractData(createFields);
@@ -80,6 +96,7 @@ const useService = () => {
       price: Number(rawPayload.price),
       description: rawPayload.description,
       warranty: rawPayload.warranty,
+      count: Number(rawPayload.count) || 0,
       status: rawPayload.status === "true",
     };
 
@@ -102,6 +119,7 @@ const useService = () => {
     newFields[index].value = event.target.value;
     setEditFields(newFields);
   };
+
   const prepareEdit = (item: ServiceData) => {
     setEditFields([
       {
@@ -127,10 +145,17 @@ const useService = () => {
       },
       {
         name: "warranty",
-        label: "Service Warranty ",
+        label: "Service Warranty",
         type: "text",
         placeholder: "Enter Service Warranty in months",
         value: item.warranty || "",
+      },
+      {
+        name: "count",
+        label: "Offer Count",
+        type: "number",
+        placeholder: "Enter offer count",
+        value: item.count?.toString() || "0",
       },
       {
         name: "status",
@@ -142,6 +167,7 @@ const useService = () => {
     ]);
     setEditingId(item._id);
   };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const rawPayload = extractData(editFields);
@@ -150,6 +176,7 @@ const useService = () => {
       price: Number(rawPayload.price),
       description: rawPayload.description,
       warranty: rawPayload.warranty,
+      count: Number(rawPayload.count) || 0,
       status: rawPayload.status === "true",
     };
 
@@ -168,9 +195,14 @@ const useService = () => {
   };
 
   const handleDelete = async (item: ServiceData) => {
-    console.log("Delete clicked for:", item);
-    await instance.delete(`/api/service/${item._id}`);
-    setServices((prev) => prev.filter((service) => service._id !== item._id));
+    try {
+      await instance.delete(`/api/service/${item._id}`);
+      toast.success("Service deleted successfully!");
+      setServices((prev) => prev.filter((service) => service._id !== item._id));
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to delete service");
+      console.error("Error deleting service:", error);
+    }
   };
 
   return {
@@ -190,4 +222,5 @@ const useService = () => {
     handleEditSubmit,
   };
 };
+
 export default useService;

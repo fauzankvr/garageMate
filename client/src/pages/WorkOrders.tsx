@@ -1,53 +1,21 @@
-import  { useEffect } from "react";
 
+import { useState } from "react";
+import { Plus, X } from "lucide-react";
 import Sidebar from "../components/layout/Sidebar";
 import UserActions from "../components/layout/headers/UserActions";
-import useOrder from "../hooks/useOrder";
-import WorkOrderCreator from "../components/ui/CreateWorkOrder";
-// import Table from "../components/ui/Table";
+import WorkOrderForm from "../components/ui/CreateWorkOrder";
 import WorkOrderTable from "./WorkOrderTable";
 
 const WorkOrders = () => {
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
 
+  const handleCreateWorkOrder = () => {
+    setShowCreateModal(true);
+  };
 
-  const {  
-    // orders, 
-// headers,
-
-fetchData}=useOrder()
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // const handleViewDetails = (item: any) => {
-  //   alert(`View details for: ${item.serviceName}`);
-  // };
-
-//   const data = orders.map((item) => [
-//   item.serviceName,
-//   item.vehicleInfo,
-//   item.customerName,
-//   item.phone,
-//   item.totalCost,
-//   <span
-//     className={`px-3 py-1 rounded-full text-xs font-medium
-//       ${
-//         item.status === "Pending"
-//           ? "bg-yellow-100 text-yellow-700"
-//           : item.status === "Progress"
-//           ? "bg-blue-100 text-blue-700"
-//           : "bg-green-100 text-green-700"
-//       }`}
-//   >
-//     {item.status}
-//   </span>,
-//   <button
-//     onClick={() => handleViewDetails(item)} 
-//     className="text-blue-500 hover:underline"
-//   >
-//     View Details
-//   </button>
-// ]);
+  const handleCloseModal = () => {
+    setShowCreateModal(false);
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -61,20 +29,46 @@ fetchData}=useOrder()
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4 gap-4">
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
-            Work Orders
+            Past Bills
           </h1>
-          <UserActions />
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleCreateWorkOrder}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus size={20} />
+              Create New Bill
+            </button>
+            <UserActions />
+          </div>
         </div>
 
-        {/* Table (responsive scroll for small screens) */}
-        <div className="overflow-x-auto  bg-white shadow rounded-lg">
-        <WorkOrderCreator/>
-          {/* <Table className="" data={data} headers={headers} /> */}
-          <WorkOrderTable/>
+        {/* Table */}
+        <div className="overflow-x-auto bg-white shadow rounded-lg">
+          <WorkOrderTable />
         </div>
+
+        {/* Create Work Order Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">Create Work Order</h3>
+                <button
+                  onClick={handleCloseModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <WorkOrderForm onSave={handleCloseModal} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default WorkOrders;
+

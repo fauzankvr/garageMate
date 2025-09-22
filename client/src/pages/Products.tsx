@@ -7,7 +7,6 @@ import ProductForm from "../components/ui/ProductForm";
 import InputField from "../components/common/input/input";
 import type { Product } from "../types/Products";
 
-
 // Define the Field interface
 interface Field {
   name: string;
@@ -49,7 +48,8 @@ const Products = () => {
     setProduct,
   } = useProduct() as UseProductReturn;
 
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     fetchProducts();
@@ -57,11 +57,19 @@ const Products = () => {
 
   const onEdit = (item: Product) => {
     prepareEdit(item);
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+  };
+
+  const openAddModal = () => {
+    setIsAddModalOpen(true);
+  };
+
+  const closeAddModal = () => {
+    setIsAddModalOpen(false);
   };
 
   const data = products.map(
@@ -69,9 +77,8 @@ const Products = () => {
       [
         item.productName,
         item.description,
-        item.price.toString(), // Convert to string for display
-        // item.sku,
-        // item.category,
+        item.price.toString(),
+        item.stock != null ? item.stock.toString() : "0", // Fallback for undefined stock
         item.brand,
         <div className="space-x-2" key={`${item._id}-actions`}>
           <button
@@ -101,12 +108,20 @@ const Products = () => {
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
             Products
           </h1>
-          <UserActions />
+          <div className="flex space-x-2">
+            <UserActions />
+            <button
+              onClick={openAddModal}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+            >
+              Add New Product
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto bg-white shadow rounded-lg">
           <Table headers={headers} data={data} />
         </div>
-        {isModalOpen && (
+        {isEditModalOpen && (
           <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
               <h2 className="text-xl font-bold mb-4">Edit Product</h2>
@@ -141,7 +156,7 @@ const Products = () => {
                 <div className="flex justify-end space-x-2">
                   <button
                     type="button"
-                    onClick={closeModal}
+                    onClick={closeEditModal}
                     className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
                   >
                     Cancel
@@ -157,12 +172,23 @@ const Products = () => {
             </div>
           </div>
         )}
-        <div className="w-full p-6">
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4">
-            Add New Product
-          </h2>
-          <ProductForm setProduct={setProduct} />
-        </div>
+        {isAddModalOpen && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
+              <h2 className="text-xl font-bold mb-4">Add New Product</h2>
+              <ProductForm setProduct={setProduct} onSuccess={closeAddModal} />
+              <div className="flex justify-end mt-4">
+                <button
+                  type="button"
+                  onClick={closeAddModal}
+                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

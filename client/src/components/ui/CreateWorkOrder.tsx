@@ -16,6 +16,7 @@ export interface Vehicle {
   year: string;
   brand: string;
   registration_number: string;
+  serviceCount: number;
   customerId: string;
 }
 
@@ -54,16 +55,24 @@ export interface NewVehicle {
   registration_number: string;
 }
 
+export interface PaymentDetails {
+  method: "cash" | "upi" | "both";
+  cashAmount?: number;
+  upiAmount?: number;
+}
+
 export interface WorkOrderData {
+  _id?: string; // For edit mode
   customerId: string;
-  vehicleId: string;
+  vehicleId?: string; // Made optional
   services: string[];
   products: string[];
   serviceCharges: ServiceCharge[];
   totalServiceCharge: number;
   totalProductCost: number;
   totalAmount: number;
-  status: "pending" | "in-progress" | "completed" | "cancelled";
+  status: "pending" | "paid";
+  paymentDetails: PaymentDetails;
 }
 
 // Create axios instance
@@ -75,7 +84,14 @@ instance.interceptors.response.use(
   }
 );
 
-const WorkOrderCreator: React.FC = () => {
+interface WorkOrderFormProps {
+  workOrder?: WorkOrderData; // For edit mode
+  onSave: () => void; // Callback to refresh list
+}
+
+const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
+  const isEdit = !!workOrder;
+
   // Main state
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
@@ -84,6 +100,9 @@ const WorkOrderCreator: React.FC = () => {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [serviceCharges, setServiceCharges] = useState<ServiceCharge[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
+    method: "cash",
+  });
 
   // Search and dropdown states
   const [phoneSearch, setPhoneSearch] = useState<string>("");
@@ -117,7 +136,57 @@ const WorkOrderCreator: React.FC = () => {
   useEffect(() => {
     fetchServices();
     fetchProducts();
-  }, []);
+    if (isEdit && workOrder) {
+      // Populate form for edit mode
+      const loadData = async () => {
+        try {
+          // Fetch customer
+          const customerResponse = await instance.get<Customer>(
+            `/api/customer/${workOrder.customerId}`
+          );
+          setSelectedCustomer(customerResponse.data);
+
+          // Fetch vehicle if present
+          if (workOrder.vehicleId) {
+            const vehicleResponse = await instance.get<Vehicle>(
+              `/api/vehicle/${workOrder.vehicleId}`
+            );
+            setSelectedVehicle(vehicleResponse.data);
+            fetchVehiclesByCustomerId(workOrder.customerId);
+          }
+
+          // Fetch services
+          const serviceResponses = await Promise.all(
+            workOrder.services.map((id) =>
+              instance.get<Service>(`/api/service/${id}`)
+            )
+          );
+          setSelectedServices(serviceResponses.map((res) => res.data));
+
+          // Fetch products
+          const productResponses = await Promise.all(
+            workOrder.products.map((id) =>
+              instance.get<Product>(`/api/product/${id}`)
+            )
+          );
+          setSelectedProducts(
+            productResponses.map((res) => ({
+              ...res.data,
+              quantity: workOrder.products.filter((id) => id === res.data._id)
+                .length,
+            }))
+          );
+
+          // Set service charges and payment details
+          setServiceCharges(workOrder.serviceCharges);
+          setPaymentDetails(workOrder.paymentDetails);
+        } catch (error) {
+          console.error("Error loading work order data:", error);
+        }
+      };
+      loadData();
+    }
+  }, [isEdit, workOrder]);
 
   // API calls
   const searchCustomerByPhone = async (phone: string): Promise<void> => {
@@ -145,8 +214,7 @@ const WorkOrderCreator: React.FC = () => {
       const response = await instance.get(
         `/api/vehicle?customerId=${customerId}`
       );
-      const vehicles = response.data.data;
-      console.log("Fetched vehicles:", vehicles);
+      const vehicles = response.data.data || response.data;
       setVehicles(vehicles);
     } catch (error) {
       console.error("Error fetching vehicles:", error);
@@ -167,7 +235,6 @@ const WorkOrderCreator: React.FC = () => {
   const fetchProducts = async (): Promise<void> => {
     try {
       const response = await instance.get<Product[]>("/api/product");
-      console.log("Fetched products:", response.data);
       setProducts(response.data);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -192,12 +259,8 @@ const WorkOrderCreator: React.FC = () => {
     if (!selectedCustomer) return;
     try {
       const vehicleData = { ...newVehicle, customerId: selectedCustomer._id };
-      const response = await instance.post<Vehicle>(
-        "/api/vehicle",
-        vehicleData
-      );
-      console.log(response.data);
-      setSelectedVehicle(response.data);
+      const response = await instance.post("/api/vehicle", vehicleData);
+      setSelectedVehicle(response?.data?.data);
       setVehicles([...vehicles, response.data]);
       setShowVehicleModal(false);
       setNewVehicle({
@@ -211,34 +274,64 @@ const WorkOrderCreator: React.FC = () => {
     }
   };
 
-  const createWorkOrder = async (): Promise<void> => {
-    if (!selectedCustomer || !selectedVehicle) return;
+  const createOrUpdateWorkOrder = async (): Promise<void> => {
+    if (!selectedCustomer) return;
 
     // Validate serviceCharges
     const validServiceCharges = serviceCharges.filter(
       (charge) => charge.description && charge.price > 0 && charge.for
     );
 
+    // Validate payment details
+    if (paymentDetails.method === "both") {
+      const totalPaid =
+        (paymentDetails.cashAmount || 0) + (paymentDetails.upiAmount || 0);
+      if (totalPaid !== calculateGrandTotal()) {
+        alert("Cash amount and UPI amount must sum to the total amount.");
+        return;
+      }
+    }
+
     const workOrderData: WorkOrderData = {
       customerId: selectedCustomer._id,
-      vehicleId: selectedVehicle._id,
+      vehicleId: selectedVehicle?._id,
       services: selectedServices.map((s) => s._id),
       products: selectedProducts.map((p) => p._id),
       serviceCharges: validServiceCharges,
       totalServiceCharge: calculateServiceTotal(),
       totalProductCost: calculateProductTotal(),
       totalAmount: calculateGrandTotal(),
-      status: "pending",
+      status: workOrder?.status || "pending",
+      paymentDetails: {
+        method: paymentDetails.method,
+        ...(paymentDetails.method === "both"
+          ? {
+              cashAmount: paymentDetails.cashAmount,
+              upiAmount: paymentDetails.upiAmount,
+            }
+          : paymentDetails.method === "upi"
+          ? { upiAmount: paymentDetails.upiAmount }
+          : {}),
+      },
     };
 
     try {
-      const response = await instance.post("/api/work-order", workOrderData);
-      console.log("Work order created:", response.data);
-      alert("Work Order created successfully!");
+      let response;
+      if (isEdit) {
+        response = await instance.put(
+          `/api/work-order/${workOrder?._id}`,
+          workOrderData
+        );
+      } else {
+        response = await instance.post("/api/work-order", workOrderData);
+      }
+      console.log("Work order saved:", response.data);
+      alert(`Work Order ${isEdit ? "updated" : "created"} successfully!`);
+      onSave();
       resetForm();
     } catch (error) {
-      console.error("Error creating work order:", error);
-      alert("Error creating work order");
+      console.error("Error saving work order:", error);
+      alert("Error saving work order");
     }
   };
 
@@ -250,6 +343,7 @@ const WorkOrderCreator: React.FC = () => {
     setSelectedProducts([]);
     setPhoneSearch("");
     setVehicles([]);
+    setPaymentDetails({ method: "cash" });
   };
 
   // Event handlers
@@ -348,11 +442,11 @@ const WorkOrderCreator: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
+    <div className="mx-auto p-6 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-lg shadow-sm">
         <div className="flex items-center justify-between p-4 border-b">
           <h1 className="text-xl font-semibold text-gray-900">
-            Create Work Order
+            {isEdit ? "Edit Bill" : "Create Bill"}
           </h1>
           <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm">
             9
@@ -459,12 +553,26 @@ const WorkOrderCreator: React.FC = () => {
                     </div>
                     <div>Reg No: {selectedVehicle.registration_number}</div>
                     <div>Brand: {selectedVehicle.brand}</div>
+                    <div className="mt-2">
+                      <span
+                        className={`inline-block text-sm font-medium ${
+                          selectedVehicle.serviceCount === 10
+                            ? "bg-green-100 text-green-700 rounded-full px-3 py-1"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        Service Count:{" "}
+                        {selectedVehicle.serviceCount === 10
+                          ? "Free"
+                          : selectedVehicle.serviceCount}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div>
                   <div className="text-sm font-medium text-gray-700 mb-2">
-                    Select Vehicle
+                    Select Vehicle (Optional)
                   </div>
                   {selectedCustomer ? (
                     <div>
@@ -485,7 +593,7 @@ const WorkOrderCreator: React.FC = () => {
                           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                           defaultValue=""
                         >
-                          <option value="">Select Vehicle</option>
+                          <option value="">No Vehicle</option>
                           {vehicles.map((vehicle) => (
                             <option key={vehicle._id} value={vehicle._id}>
                               {vehicle.model} - {vehicle.registration_number}
@@ -734,6 +842,75 @@ const WorkOrderCreator: React.FC = () => {
           </div>
         </div>
 
+        {/* Payment Details Section */}
+        <div className="p-6 bg-gray-100 border-t">
+          <h2 className="text-sm font-medium text-gray-700 mb-4">
+            Payment Details
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Payment Method
+              </label>
+              <select
+                value={paymentDetails.method}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                  setPaymentDetails({
+                    ...paymentDetails,
+                    method: e.target.value as "cash" | "upi" | "both",
+                  })
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+
+            {paymentDetails.method === "both" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Cash Amount
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Cash Amount"
+                    value={paymentDetails.cashAmount || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setPaymentDetails({
+                        ...paymentDetails,
+                        cashAmount: parseFloat(e.target.value) || undefined,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    UPI Amount
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="UPI Amount"
+                    value={paymentDetails.upiAmount || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setPaymentDetails({
+                        ...paymentDetails,
+                        upiAmount: parseFloat(e.target.value) || undefined,
+                      })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Cost Breakdown */}
         <div className="p-6 bg-gray-50 border-t">
           <h2 className="text-sm font-medium text-gray-700 mb-4">
@@ -755,21 +932,21 @@ const WorkOrderCreator: React.FC = () => {
           </div>
         </div>
 
-        {/* Create Button */}
+        {/* Create/Update Button */}
         <div className="p-6">
           <button
-            onClick={createWorkOrder}
-            disabled={!selectedCustomer || !selectedVehicle}
+            onClick={createOrUpdateWorkOrder}
+            disabled={!selectedCustomer}
             className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Create Work Order
+            {isEdit ? "Update Work Order" : "Create Work Order"}
           </button>
         </div>
       </div>
 
       {/* Customer Modal */}
       {showCustomerModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium flex items-center">
@@ -912,4 +1089,4 @@ const WorkOrderCreator: React.FC = () => {
   );
 };
 
-export default WorkOrderCreator;
+export default WorkOrderForm;

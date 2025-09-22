@@ -10,7 +10,7 @@ const useProduct = () => {
     "Description",
     "Price",
     // "Sku",
-    // "Category",
+    "Stock",
     "Brand",
     "Actions",
   ];

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import Table from "../components/ui/Table"; // Adjust import path
 import Sidebar from "../components/layout/Sidebar";
@@ -46,11 +45,9 @@ const Salaries = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch salaries
         const salaryResponse = await instance.get("/api/salaries");
         setSalaries(salaryResponse.data);
 
-        // Fetch employees for the dropdown
         const employeeResponse = await instance.get("/api/employee");
         setEmployees(employeeResponse.data);
       } catch (error) {
@@ -124,15 +121,20 @@ const Salaries = () => {
         baseSalary: Number(formData.baseSalary),
         bonus: Number(formData.bonus) || 0,
         deduction: Number(formData.deduction) || 0,
-        borrowed: Number(formData.bonus) || 0,
+        borrowed: Number(formData.borrowed) || 0,
         paid: Number(formData.paid) || 0,
         isPaid: formData.isPaid || false,
       };
-      const response = await instance.put(`/api/salaries/${currentSalary._id}`, payload);
+      const response = await instance.put(
+        `/api/salaries/${currentSalary._id}`,
+        payload
+      );
       if (response.status === 200) {
         const updatedSalary = response.data;
         setSalaries((prev) =>
-          prev.map((sal) => (sal._id === updatedSalary._id ? updatedSalary : sal))
+          prev.map((sal) =>
+            sal._id === updatedSalary._id ? updatedSalary : sal
+          )
         );
         setFormData({
           employee: { _id: "", name: "", phone: "" },
@@ -156,7 +158,8 @@ const Salaries = () => {
 
   // Handle deleting a salary
   const handleDeleteSalary = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this salary record?")) return;
+    if (!window.confirm("Are you sure you want to delete this salary record?"))
+      return;
     try {
       const response = await instance.delete(`/api/salaries/${id}`);
       if (response.status === 200) {
@@ -264,7 +267,7 @@ const Salaries = () => {
           </h1>
           <div className="flex space-x-2">
             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
               onClick={() => openModal()}
             >
               Add Salary
@@ -279,133 +282,137 @@ const Salaries = () => {
 
       {/* Modal for Add/Edit Salary */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">
-              {currentSalary ? "Edit Salary" : "Add Salary"}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Employee
-                </label>
-                <select
-                  name="employee"
-                  value={formData.employee?._id || ""}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                  required
-                >
-                  <option value="" disabled>
-                    Select an employee
-                  </option>
-                  {employees.map((emp) => (
-                    <option key={emp._id} value={emp._id}>
-                      {emp.name} ({emp.phone})
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {currentSalary ? "Edit Salary" : "Add Salary"}
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Employee
+                  </label>
+                  <select
+                    name="employee"
+                    value={formData.employee?._id || ""}
+                    onChange={handleInputChange}
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+                    required
+                  >
+                    <option value="" disabled>
+                      Select an employee
                     </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Month (YYYY-MM)
-                </label>
-                <input
-                  type="text"
-                  name="month"
-                  value={formData.month}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 2025-09"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Base Salary
-                </label>
-                <input
-                  type="number"
-                  name="baseSalary"
-                  value={formData.baseSalary}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Bonus (optional)
-                </label>
-                <input
-                  type="number"
-                  name="bonus"
-                  value={formData.bonus}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Deduction (optional)
-                </label>
-                <input
-                  type="number"
-                  name="deduction"
-                  value={formData.deduction}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Borrowed (optional)
-                </label>
-                <input
-                  type="number"
-                  name="borrowed"
-                  value={formData.borrowed}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Paid Amount
-                </label>
-                <input
-                  type="number"
-                  name="paid"
-                  value={formData.paid}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Status
-                </label>
-                <select
-                  name="isPaid"
-                  value={formData.isPaid ? "true" : "false"}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                >
-                  <option value="true">Paid</option>
-                  <option value="false">Unpaid</option>
-                </select>
+                    {employees.map((emp) => (
+                      <option key={emp._id} value={emp._id}>
+                        {emp.name} ({emp.phone})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Month (YYYY-MM)
+                  </label>
+                  <input
+                    type="text"
+                    name="month"
+                    value={formData.month}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 2025-09"
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Base Salary
+                  </label>
+                  <input
+                    type="number"
+                    name="baseSalary"
+                    value={formData.baseSalary}
+                    onChange={handleInputChange}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bonus (optional)
+                  </label>
+                  <input
+                    type="number"
+                    name="bonus"
+                    value={formData.bonus}
+                    onChange={handleInputChange}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Deduction (optional)
+                  </label>
+                  <input
+                    type="number"
+                    name="deduction"
+                    value={formData.deduction}
+                    onChange={handleInputChange}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Borrowed (optional)
+                  </label>
+                  <input
+                    type="number"
+                    name="borrowed"
+                    value={formData.borrowed}
+                    onChange={handleInputChange}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Paid Amount
+                  </label>
+                  <input
+                    type="number"
+                    name="paid"
+                    value={formData.paid}
+                    onChange={handleInputChange}
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    name="isPaid"
+                    value={formData.isPaid ? "true" : "false"}
+                    onChange={handleInputChange}
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+                  >
+                    <option value="true">Paid</option>
+                    <option value="false">Unpaid</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div className="mt-6 flex justify-end space-x-2">
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
               <button
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 font-medium"
                 onClick={() => setIsModalOpen(false)}
               >
                 Cancel
               </button>
               <button
-                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
                 onClick={currentSalary ? handleEditSalary : handleAddSalary}
               >
                 {currentSalary ? "Update" : "Add"}
