@@ -31,7 +31,7 @@ const Services = () => {
   }, []);
 
   // Modified to open edit modal and prepare fields
-  const onEdit = (item) => {
+  const onEdit = (item:any) => {
     prepareEdit(item);
     setIsEditModalOpen(true);
   };
@@ -46,14 +46,14 @@ const Services = () => {
   };
 
   // Handle form submission for editing
-  const onSubmitEdit = (e) => {
+  const onSubmitEdit = (e:any) => {
     e.preventDefault();
     handleEditSubmit(e);
     closeEditModal();
   };
 
   // Handle form submission for creating
-  const onSubmitCreate = (e) => {
+  const onSubmitCreate = (e:any) => {
     e.preventDefault();
     handleCreateSubmit(e);
     closeCreateModal();
@@ -265,4 +265,3 @@ const Services = () => {
 };
 
 export default Services;
-        
