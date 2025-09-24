@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import Sidebar from "../components/layout/Sidebar";
@@ -18,9 +17,9 @@ const WorkOrders = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar for desktop */}
-      <div className="hidden md:block w-50 bg-white border-r shadow">
+      <div className="hidden md:block bg-white shadow-sm">
         <Sidebar />
       </div>
 
@@ -34,7 +33,7 @@ const WorkOrders = () => {
           <div className="flex items-center gap-4">
             <button
               onClick={handleCreateWorkOrder}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               <Plus size={20} />
               Create New Bill
@@ -71,4 +70,3 @@ const WorkOrders = () => {
 };
 
 export default WorkOrders;
-

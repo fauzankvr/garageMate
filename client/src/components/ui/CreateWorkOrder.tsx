@@ -3,14 +3,14 @@ import { Search, X, Plus, User, Car } from "lucide-react";
 import instance from "../../axios/axios";
 
 // Type definitions
-export interface Customer {
+interface Customer {
   _id: string;
   phone: string;
   name: string;
   email: string;
 }
 
-export interface Vehicle {
+interface Vehicle {
   _id: string;
   model: string;
   year: string;
@@ -20,54 +20,59 @@ export interface Vehicle {
   customerId: string;
 }
 
-export interface Service {
+interface Service {
   _id: string;
   warranty: string;
   status: boolean;
   price: number;
+  count: number;
   serviceName: string;
   description: string;
 }
 
-export interface Product {
+interface Product {
   _id: string;
   productName: string;
   price: number;
-  quantity?: number;
+  quantity: number; // Made non-optional for consistency
 }
 
-export interface ServiceCharge {
+interface ProductItem {
+  productId: string;
+  quantity: number;
+}
+
+interface ServiceCharge {
   description: string;
   price: number;
   for: string;
 }
 
-export interface NewCustomer {
+interface NewCustomer {
   name: string;
   phone: string;
   email: string;
 }
 
-export interface NewVehicle {
+interface NewVehicle {
   model: string;
   year: string;
   brand: string;
   registration_number: string;
 }
 
-export interface PaymentDetails {
+interface PaymentDetails {
   method: "cash" | "upi" | "both";
   cashAmount?: number;
   upiAmount?: number;
 }
 
-export interface WorkOrderData {
-  _id?: string; // For edit mode
+interface WorkOrder {
+  _id?: string;
   customerId: string;
-  vehicleId?: string; // Made optional
-  services: string[];
-  products: string[];
-  serviceCharges: ServiceCharge[];
+  vehicleId?: string;
+  services: Service[];
+  products: ProductItem[];
   totalServiceCharge: number;
   totalProductCost: number;
   totalAmount: number;
@@ -75,19 +80,19 @@ export interface WorkOrderData {
   paymentDetails: PaymentDetails;
 }
 
+interface WorkOrderFormProps {
+  workOrder?: WorkOrder; // For edit mode
+  onSave: () => void; // Callback to refresh list
+}
+
 // Create axios instance
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("Api Error:", error.response?.data || error.message);
+    console.error("API Error:", error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
-
-interface WorkOrderFormProps {
-  workOrder?: WorkOrderData; // For edit mode
-  onSave: () => void; // Callback to refresh list
-}
 
 const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   const isEdit = !!workOrder;
@@ -102,6 +107,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
     method: "cash",
+    cashAmount: 0,
+    upiAmount: 0,
   });
 
   // Search and dropdown states
@@ -157,28 +164,27 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 
           // Fetch services
           const serviceResponses = await Promise.all(
-            workOrder.services.map((id) =>
-              instance.get<Service>(`/api/service/${id}`)
+            workOrder.services.map((service) =>
+              instance.get<Service>(`/api/service/${service._id}`)
             )
           );
           setSelectedServices(serviceResponses.map((res) => res.data));
 
           // Fetch products
           const productResponses = await Promise.all(
-            workOrder.products.map((id) =>
-              instance.get<Product>(`/api/product/${id}`)
+            workOrder.products.map((product) =>
+              instance.get<Product>(`/api/product/${product.productId}`)
             )
           );
           setSelectedProducts(
-            productResponses.map((res) => ({
+            productResponses.map((res, index) => ({
               ...res.data,
-              quantity: workOrder.products.filter((id) => id === res.data._id)
-                .length,
+              quantity: workOrder.products[index].quantity,
             }))
           );
 
           // Set service charges and payment details
-          setServiceCharges(workOrder.serviceCharges);
+          setServiceCharges(workOrder.serviceCharges || []);
           setPaymentDetails(workOrder.paymentDetails);
         } catch (error) {
           console.error("Error loading work order data:", error);
@@ -191,6 +197,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   // API calls
   const searchCustomerByPhone = async (phone: string): Promise<void> => {
     if (phone.length < 10) {
+      setCustomers([]);
       return;
     }
     setLoadingCustomers(true);
@@ -201,6 +208,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       setCustomers(response.data);
     } catch (error) {
       console.error("Error searching customers:", error);
+      setCustomers([]);
     } finally {
       setLoadingCustomers(false);
     }
@@ -211,13 +219,13 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   ): Promise<void> => {
     setLoadingVehicles(true);
     try {
-      const response = await instance.get(
+      const response = await instance.get<Vehicle[]>(
         `/api/vehicle?customerId=${customerId}`
       );
-      const vehicles = response.data.data || response.data;
-      setVehicles(vehicles);
+      setVehicles(response.data);
     } catch (error) {
       console.error("Error fetching vehicles:", error);
+      setVehicles([]);
     } finally {
       setLoadingVehicles(false);
     }
@@ -259,8 +267,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     if (!selectedCustomer) return;
     try {
       const vehicleData = { ...newVehicle, customerId: selectedCustomer._id };
-      const response = await instance.post("/api/vehicle", vehicleData);
-      setSelectedVehicle(response?.data?.data);
+      const response = await instance.post<Vehicle>(
+        "/api/vehicle",
+        vehicleData
+      );
+      setSelectedVehicle(response.data);
       setVehicles([...vehicles, response.data]);
       setShowVehicleModal(false);
       setNewVehicle({
@@ -275,7 +286,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   };
 
   const createOrUpdateWorkOrder = async (): Promise<void> => {
-    if (!selectedCustomer) return;
+    if (!selectedCustomer) {
+      alert("Please select a customer.");
+      return;
+    }
 
     // Validate serviceCharges
     const validServiceCharges = serviceCharges.filter(
@@ -292,38 +306,52 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       }
     }
 
-    const workOrderData: WorkOrderData = {
+    // Map serviceCharges to Service objects
+    const mappedServiceCharges: Service[] = validServiceCharges.map(
+      (charge) => ({
+        _id: `temp-${Date.now()}-${Math.random()}`, // Temporary ID for new charges
+        warranty: "N/A",
+        status: true,
+        price: charge.price,
+        count: 1,
+        serviceName: charge.for,
+        description: charge.description,
+      })
+    );
+
+    // Combine selectedServices and mappedServiceCharges
+    const services: Service[] = [...selectedServices, ...mappedServiceCharges];
+
+    // Map selectedProducts to ProductItem objects
+    const products: ProductItem[] = selectedProducts.map((product) => ({
+      productId: product._id,
+      quantity: product.quantity,
+    }));
+
+    const workOrderData: WorkOrder = {
       customerId: selectedCustomer._id,
       vehicleId: selectedVehicle?._id,
-      services: selectedServices.map((s) => s._id),
-      products: selectedProducts.map((p) => p._id),
-      serviceCharges: validServiceCharges,
+      services,
+      products,
       totalServiceCharge: calculateServiceTotal(),
       totalProductCost: calculateProductTotal(),
       totalAmount: calculateGrandTotal(),
       status: workOrder?.status || "pending",
-      paymentDetails: {
-        method: paymentDetails.method,
-        ...(paymentDetails.method === "both"
-          ? {
-              cashAmount: paymentDetails.cashAmount,
-              upiAmount: paymentDetails.upiAmount,
-            }
-          : paymentDetails.method === "upi"
-          ? { upiAmount: paymentDetails.upiAmount }
-          : {}),
-      },
+      paymentDetails,
     };
 
     try {
       let response;
       if (isEdit) {
-        response = await instance.put(
+        response = await instance.put<WorkOrder>(
           `/api/work-order/${workOrder?._id}`,
           workOrderData
         );
       } else {
-        response = await instance.post("/api/work-order", workOrderData);
+        response = await instance.post<WorkOrder>(
+          "/api/work-order",
+          workOrderData
+        );
       }
       console.log("Work order saved:", response.data);
       alert(`Work Order ${isEdit ? "updated" : "created"} successfully!`);
@@ -343,7 +371,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     setSelectedProducts([]);
     setPhoneSearch("");
     setVehicles([]);
-    setPaymentDetails({ method: "cash" });
+    setPaymentDetails({ method: "cash", cashAmount: 0, upiAmount: 0 });
   };
 
   // Event handlers
@@ -397,8 +425,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     );
     if (existingIndex >= 0) {
       const updated = [...selectedProducts];
-      updated[existingIndex].quantity =
-        (updated[existingIndex].quantity || 0) + quantity;
+      updated[existingIndex].quantity += quantity;
       setSelectedProducts(updated);
     } else {
       setSelectedProducts([...selectedProducts, { ...product, quantity }]);
@@ -420,7 +447,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   // Calculations
   const calculateServiceTotal = (): number => {
     const servicePrice = selectedServices.reduce(
-      (sum, service) => sum + (service.price || 0),
+      (sum, service) => sum + service.price * service.count,
       0
     );
     const chargeTotal = serviceCharges.reduce(
@@ -432,7 +459,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 
   const calculateProductTotal = (): number => {
     return selectedProducts.reduce(
-      (sum, product) => sum + product.price * (product.quantity || 1),
+      (sum, product) => sum + product.price * product.quantity,
       0
     );
   };
@@ -760,8 +787,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                     <div>Quantity: {product.quantity}</div>
                     <div>Price: ₹{product.price}</div>
                     <div>
-                      Total: ₹
-                      {(product.price * (product.quantity || 1)).toFixed(2)}
+                      Total: ₹{(product.price * product.quantity).toFixed(2)}
                     </div>
                     <input
                       type="number"
@@ -791,7 +817,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                 const product = products.find((p) => p._id === e.target.value);
                 const quantityInput = document.getElementById(
                   "product-quantity"
-                ) as HTMLInputElement;
+                ) as HTMLInputElement | null;
                 const quantity = parseInt(quantityInput?.value || "1");
                 if (product && quantity > 0) addProduct(product, quantity);
                 e.target.value = "";
@@ -803,7 +829,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
               <option value="">Select Product</option>
               {products.map((product) => (
                 <option key={product._id} value={product._id}>
-                  {product.productName || "Product"} - ₹{product.price || 109}
+                  {product.productName} - ₹{product.price}
                 </option>
               ))}
             </select>
@@ -821,14 +847,14 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
               onClick={() => {
                 const select = document.querySelector(
                   "select"
-                ) as HTMLSelectElement;
-                const product = products.find((p) => p._id === select.value);
+                ) as HTMLSelectElement | null;
+                const product = products.find((p) => p._id === select?.value);
                 const quantityInput = document.getElementById(
                   "product-quantity"
-                ) as HTMLInputElement;
+                ) as HTMLInputElement | null;
                 const quantity = parseInt(quantityInput?.value || "1");
                 if (product && quantity > 0) addProduct(product, quantity);
-                select.value = "";
+                if (select) select.value = "";
                 if (quantityInput) quantityInput.value = "1";
               }}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
@@ -877,11 +903,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                   <input
                     type="number"
                     placeholder="Cash Amount"
-                    value={paymentDetails.cashAmount || ""}
+                    value={paymentDetails.cashAmount ?? ""}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setPaymentDetails({
                         ...paymentDetails,
-                        cashAmount: parseFloat(e.target.value) || undefined,
+                        cashAmount: parseFloat(e.target.value) || 0,
                       })
                     }
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -895,11 +921,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                   <input
                     type="number"
                     placeholder="UPI Amount"
-                    value={paymentDetails.upiAmount || ""}
+                    value={paymentDetails.upiAmount ?? ""}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setPaymentDetails({
                         ...paymentDetails,
-                        upiAmount: parseFloat(e.target.value) || undefined,
+                        upiAmount: parseFloat(e.target.value) || 0,
                       })
                     }
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1090,3 +1116,5 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 };
 
 export default WorkOrderForm;
+
+

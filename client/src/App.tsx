@@ -19,6 +19,8 @@ import CreateVehicle from "./pages/CreateVehicle";
 import Dashboard from "./components/ui/Dashboard";
 import Salaries from "./pages/Salary";
 import Vehicles from "./pages/Vehicle";
+import Expenses from "./pages/Expense";
+import Customers from "./pages/Customer";
 
 const App = () => {
   return (
@@ -40,7 +42,9 @@ const App = () => {
         <Route path="/companies" element={<CompanyTable />} />
         <Route path="/employees" element={<Employees />} />
         <Route path="/salaries" element={<Salaries />} />
-        <Route path="/vehicle" element={<Vehicles/> }/>
+        <Route path="/vehicle" element={<Vehicles />} />
+        <Route path="/expenses" element={<Expenses />} />
+        <Route path="/customers" element={ <Customers/>} />
 
         {/* Services & Orders */}
         <Route path="/services" element={<Services />} />

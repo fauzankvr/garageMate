@@ -185,7 +185,7 @@ const Vehicles = () => {
       const response = await instance.post("/api/vehicle", formData);
       console.log("Add Vehicle Response:", response.data);
       if (response.status === 201) {
-        const newVehicle = response.data;
+        const newVehicle = response.data.data;
         setVehicles((prev) => [...prev, newVehicle]);
         setFilteredVehicles((prev) => [...prev, newVehicle]);
         setFormData({

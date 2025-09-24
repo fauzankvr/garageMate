@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { Home, Users, PlusCircle, UserSquare2, Car } from "lucide-react";
-import { AiFillProduct } from "react-icons/ai";
+import { AiFillDollarCircle, AiFillProduct } from "react-icons/ai";
 import { FaMoneyBillWave } from "react-icons/fa";
 
 const Sidebar = () => {
@@ -32,6 +32,9 @@ const Sidebar = () => {
       path: "/products",
       icon: <AiFillProduct className="w-5 h-5" />,
     },
+    { name: "Expenses",
+  path: "/expenses",
+  icon: <AiFillDollarCircle className="w-5 h-5" />},
     {
       name: "Salaries",
       path: "/salaries",
