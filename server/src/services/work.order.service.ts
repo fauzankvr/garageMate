@@ -10,6 +10,7 @@ class WorkOrderService {
 
   async create(data: WorkOrder): Promise<WorkOrder> {
     try {
+      console.log("daa...",data)
       const workOrder = new this.workOrderModel(data);
       return await workOrder.save();
     } catch (error) {

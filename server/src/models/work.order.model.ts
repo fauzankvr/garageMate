@@ -1,9 +1,17 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-interface ServiceCharge {
-  description: string;
+interface Service {
+  warranty: string;
+  status: boolean;
   price: number;
-  for: string;
+  count: number;
+  serviceName: string;
+  description: string;
+}
+
+interface ProductItem {
+  productId: mongoose.Types.ObjectId;
+  quantity: number;
 }
 
 interface PaymentDetails {
@@ -14,14 +22,13 @@ interface PaymentDetails {
 
 interface WorkOrder extends Document {
   customerId: mongoose.Types.ObjectId;
-  vehicleId?: mongoose.Types.ObjectId; // Optional
-  services: mongoose.Types.ObjectId[];
-  products: mongoose.Types.ObjectId[];
-  serviceCharges: ServiceCharge[];
+  vehicleId?: mongoose.Types.ObjectId;
+  services: Service[];
+  products: ProductItem[];
   totalProductCost: number;
   totalServiceCharge: number;
   totalAmount: number;
-  status: "pending" | "paid"; // Updated status options
+  status: "pending" | "paid";
   paymentDetails: PaymentDetails;
   createdAt?: Date;
   updatedAt?: Date;
@@ -38,13 +45,24 @@ const WorkOrderSchema = new Schema<WorkOrder>(
       type: Schema.Types.ObjectId,
       ref: "Vehicle",
     },
-    services: [{ type: Schema.Types.ObjectId, ref: "Service", required: true }],
-    products: [{ type: Schema.Types.ObjectId, ref: "Product", required: true }],
-    serviceCharges: [
+    services: [
       {
-        description: { type: String, required: true },
+        warranty: { type: String, required: true },
+        status: { type: Boolean, required: true, default: true },
         price: { type: Number, required: true },
-        for: { type: String, required: true },
+        count: { type: Number, required: true },
+        serviceName: { type: String, required: true },
+        description: { type: String, required: true },
+      },
+    ],
+    products: [
+      {
+        productId: {
+          type: Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+        quantity: { type: Number, required: true, min: 1 },
       },
     ],
     totalProductCost: { type: Number, required: true },
@@ -99,5 +117,4 @@ export const WorkOrderModel = mongoose.model<WorkOrder>(
   "WorkOrder",
   WorkOrderSchema
 );
-export type { WorkOrder, ServiceCharge, PaymentDetails };
-
+export type { WorkOrder, Service, ProductItem, PaymentDetails };
