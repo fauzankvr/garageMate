@@ -16,8 +16,14 @@ interface ProductItem {
 
 interface PaymentDetails {
   method: "cash" | "upi" | "both";
-  cashAmount?: number; // Only used when method is "both"
-  upiAmount?: number; // Only used when method is "both"
+  cashAmount?: number;
+  upiAmount?: number;
+}
+
+interface ServiceCharge {
+  description: string;
+  price: number;
+  for: string; // e.g., "labor", "tax", "additional fee"
 }
 
 interface WorkOrder extends Document {
@@ -25,6 +31,7 @@ interface WorkOrder extends Document {
   vehicleId?: mongoose.Types.ObjectId;
   services: Service[];
   products: ProductItem[];
+  serviceCharges: ServiceCharge[];
   totalProductCost: number;
   totalServiceCharge: number;
   totalAmount: number;
@@ -63,6 +70,13 @@ const WorkOrderSchema = new Schema<WorkOrder>(
           required: true,
         },
         quantity: { type: Number, required: true, min: 1 },
+      },
+    ],
+    serviceCharges: [
+      {
+        description: { type: String, required: true },
+        price: { type: Number, required: true },
+        for: { type: String, required: true },
       },
     ],
     totalProductCost: { type: Number, required: true },
@@ -117,4 +131,4 @@ export const WorkOrderModel = mongoose.model<WorkOrder>(
   "WorkOrder",
   WorkOrderSchema
 );
-export type { WorkOrder, Service, ProductItem, PaymentDetails };
+export type { WorkOrder, Service, ProductItem, PaymentDetails, ServiceCharge };
