@@ -23,7 +23,7 @@ app.use(express.json());
 app.use("/api/customer", customerRoutes);
 app.use("/api/service", serviceRoutes);
 app.use("/api/product", productRoutes);
-app.use("/api/work-order", workOrderRoutes);
+app.use("/api/workorder", workOrderRoutes );
 app.use("/api/vehicle", vehicleRoutes);
 app.use("/api/employee", employeeRoutes);
 app.use("/api/salaries", salaryRoutes);
