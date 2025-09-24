@@ -1,6 +1,7 @@
 import { useState } from "react";
 import instance from "../axios/axios";
-import type { Expense } from "../components/ui/ExpeseForm";
+import type { Expense } from "../types/Expense";
+
 
 // Define the Field interface
 interface Field {

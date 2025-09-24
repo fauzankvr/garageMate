@@ -3,14 +3,14 @@ import { Search, X, Plus, User, Car } from "lucide-react";
 import instance from "../../axios/axios";
 
 // Type definitions
-interface Customer {
+export interface Customer {
   _id: string;
   phone: string;
   name: string;
   email: string;
 }
 
-interface Vehicle {
+export interface Vehicle {
   _id: string;
   model: string;
   year: string;
@@ -20,7 +20,7 @@ interface Vehicle {
   customerId: string;
 }
 
-interface Service {
+export interface Service {
   _id: string;
   warranty: string;
   status: boolean;
@@ -30,49 +30,50 @@ interface Service {
   description: string;
 }
 
-interface Product {
+export interface Product {
   _id: string;
-  productName: string;
+  name: string;
   price: number;
-  quantity: number; // Made non-optional for consistency
+  quantity: number;
 }
 
-interface ProductItem {
+export interface ProductItem {
   productId: string;
   quantity: number;
 }
 
-interface ServiceCharge {
+export interface ServiceCharge {
   description: string;
   price: number;
   for: string;
 }
 
-interface NewCustomer {
+export interface NewCustomer {
   name: string;
   phone: string;
   email: string;
 }
 
-interface NewVehicle {
+export interface NewVehicle {
   model: string;
   year: string;
   brand: string;
   registration_number: string;
 }
 
-interface PaymentDetails {
+export interface PaymentDetails {
   method: "cash" | "upi" | "both";
   cashAmount?: number;
   upiAmount?: number;
 }
 
-interface WorkOrder {
+export interface WorkOrder {
   _id?: string;
   customerId: string;
   vehicleId?: string;
   services: Service[];
   products: ProductItem[];
+  serviceCharges: ServiceCharge[];
   totalServiceCharge: number;
   totalProductCost: number;
   totalAmount: number;
@@ -81,18 +82,9 @@ interface WorkOrder {
 }
 
 interface WorkOrderFormProps {
-  workOrder?: WorkOrder; // For edit mode
-  onSave: () => void; // Callback to refresh list
+  workOrder?: WorkOrder;
+  onSave: () => void;
 }
-
-// Create axios instance
-instance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error("API Error:", error.response?.data || error.message);
-    return Promise.reject(error);
-  }
-);
 
 const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   const isEdit = !!workOrder;
@@ -144,7 +136,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     fetchServices();
     fetchProducts();
     if (isEdit && workOrder) {
-      // Populate form for edit mode
       const loadData = async () => {
         try {
           // Fetch customer
@@ -163,12 +154,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
           }
 
           // Fetch services
-          const serviceResponses = await Promise.all(
-            workOrder.services.map((service) =>
-              instance.get<Service>(`/api/service/${service._id}`)
-            )
-          );
-          setSelectedServices(serviceResponses.map((res) => res.data));
+          setSelectedServices(workOrder.services);
 
           // Fetch products
           const productResponses = await Promise.all(
@@ -184,8 +170,12 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
           );
 
           // Set service charges and payment details
-          setServiceCharges(workOrder.serviceCharges || []);
-          setPaymentDetails(workOrder.paymentDetails);
+          setServiceCharges(workOrder.serviceCharges ?? []);
+          setPaymentDetails({
+            method: workOrder.paymentDetails.method,
+            cashAmount: workOrder.paymentDetails.cashAmount ?? 0,
+            upiAmount: workOrder.paymentDetails.upiAmount ?? 0,
+          });
         } catch (error) {
           console.error("Error loading work order data:", error);
         }
@@ -264,7 +254,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   };
 
   const createVehicle = async (): Promise<void> => {
-    if (!selectedCustomer) return;
+    if (!selectedCustomer?._id) {
+      alert("Please select a customer first.");
+      return;
+    }
     try {
       const vehicleData = { ...newVehicle, customerId: selectedCustomer._id };
       const response = await instance.post<Vehicle>(
@@ -286,7 +279,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   };
 
   const createOrUpdateWorkOrder = async (): Promise<void> => {
-    if (!selectedCustomer) {
+    if (!selectedCustomer?._id) {
       alert("Please select a customer.");
       return;
     }
@@ -295,21 +288,27 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     const validServiceCharges = serviceCharges.filter(
       (charge) => charge.description && charge.price > 0 && charge.for
     );
+    if (serviceCharges.length > 0 && validServiceCharges.length === 0) {
+      alert(
+        "Please fill in all service charge fields or remove empty charges."
+      );
+      return;
+    }
 
     // Validate payment details
     if (paymentDetails.method === "both") {
       const totalPaid =
-        (paymentDetails.cashAmount || 0) + (paymentDetails.upiAmount || 0);
+        (paymentDetails.cashAmount ?? 0) + (paymentDetails.upiAmount ?? 0);
       if (totalPaid !== calculateGrandTotal()) {
         alert("Cash amount and UPI amount must sum to the total amount.");
         return;
       }
     }
 
-    // Map serviceCharges to Service objects
+    // Map serviceCharges to Service objects for compatibility
     const mappedServiceCharges: Service[] = validServiceCharges.map(
       (charge) => ({
-        _id: `temp-${Date.now()}-${Math.random()}`, // Temporary ID for new charges
+        _id: `temp-${Date.now()}-${Math.random()}`,
         warranty: "N/A",
         status: true,
         price: charge.price,
@@ -329,27 +328,33 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     }));
 
     const workOrderData: WorkOrder = {
+      _id: workOrder?._id,
       customerId: selectedCustomer._id,
       vehicleId: selectedVehicle?._id,
       services,
       products,
+      serviceCharges: validServiceCharges,
       totalServiceCharge: calculateServiceTotal(),
       totalProductCost: calculateProductTotal(),
       totalAmount: calculateGrandTotal(),
-      status: workOrder?.status || "pending",
-      paymentDetails,
+      status: workOrder?.status ?? "pending",
+      paymentDetails: {
+        method: paymentDetails.method,
+        cashAmount: paymentDetails.cashAmount ?? 0,
+        upiAmount: paymentDetails.upiAmount ?? 0,
+      },
     };
 
     try {
       let response;
-      if (isEdit) {
+      if (isEdit && workOrder?._id) {
         response = await instance.put<WorkOrder>(
-          `/api/work-order/${workOrder?._id}`,
+          `/api/workorder/${workOrder._id}`,
           workOrderData
         );
       } else {
         response = await instance.post<WorkOrder>(
-          "/api/work-order",
+          "/api/workorder",
           workOrderData
         );
       }
@@ -447,11 +452,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   // Calculations
   const calculateServiceTotal = (): number => {
     const servicePrice = selectedServices.reduce(
-      (sum, service) => sum + service.price * service.count,
+      (sum, service) => sum + (service.price ?? 0) * (service.count ?? 1),
       0
     );
     const chargeTotal = serviceCharges.reduce(
-      (sum, charge) => sum + (charge.price || 0),
+      (sum, charge) => sum + (charge.price ?? 0),
       0
     );
     return servicePrice + chargeTotal;
@@ -459,7 +464,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 
   const calculateProductTotal = (): number => {
     return selectedProducts.reduce(
-      (sum, product) => sum + product.price * product.quantity,
+      (sum, product) => sum + (product.price ?? 0) * (product.quantity ?? 0),
       0
     );
   };
@@ -673,7 +678,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                     <div className="font-medium">
                       Name: {service.serviceName}
                     </div>
-                    <div>Price: ₹{service.price}</div>
+                    <div>
+                      Price: ₹{(service.price ?? 0).toLocaleString("en-IN")}
+                    </div>
                     <div>Description: {service.description}</div>
                   </div>
                 </div>
@@ -697,7 +704,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             <option value="">Select Service</option>
             {services.map((service) => (
               <option key={service._id} value={service._id}>
-                {service.serviceName} - ₹{service.price}
+                {service.serviceName} - ₹
+                {(service.price ?? 0).toLocaleString("en-IN")}
               </option>
             ))}
           </select>
@@ -721,7 +729,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                 <input
                   type="number"
                   placeholder="Price"
-                  value={charge.price}
+                  value={charge.price ?? ""}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     updateServiceCharge(
                       index,
@@ -759,7 +767,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
           </div>
 
           <div className="text-sm font-medium">
-            Total Service Charge: ₹{calculateServiceTotal()}
+            Total Service Charge: ₹
+            {calculateServiceTotal().toLocaleString("en-IN")}
           </div>
         </div>
 
@@ -781,13 +790,16 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                     <X size={16} />
                   </button>
                   <div className="text-sm">
-                    <div className="font-medium">
-                      Product: {product.productName}
-                    </div>
+                    <div className="font-medium">Product: {product.name}</div>
                     <div>Quantity: {product.quantity}</div>
-                    <div>Price: ₹{product.price}</div>
                     <div>
-                      Total: ₹{(product.price * product.quantity).toFixed(2)}
+                      Price: ₹{(product.price ?? 0).toLocaleString("en-IN")}
+                    </div>
+                    <div>
+                      Total: ₹
+                      {(
+                        (product.price ?? 0) * (product.quantity ?? 0)
+                      ).toLocaleString("en-IN")}
                     </div>
                     <input
                       type="number"
@@ -829,7 +841,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
               <option value="">Select Product</option>
               {products.map((product) => (
                 <option key={product._id} value={product._id}>
-                  {product.productName} - ₹{product.price}
+                  {product.name} - ₹
+                  {(product.price ?? 0).toLocaleString("en-IN")}
                 </option>
               ))}
             </select>
@@ -864,7 +877,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
           </div>
 
           <div className="text-sm font-medium">
-            Total Product Cost: ₹{calculateProductTotal()}
+            Total Product Cost: ₹
+            {calculateProductTotal().toLocaleString("en-IN")}
           </div>
         </div>
 
@@ -945,15 +959,15 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span>Total Service Charge:</span>
-              <span>₹{calculateServiceTotal()}</span>
+              <span>₹{calculateServiceTotal().toLocaleString("en-IN")}</span>
             </div>
             <div className="flex justify-between">
               <span>Total Product Cost:</span>
-              <span>₹{calculateProductTotal()}</span>
+              <span>₹{calculateProductTotal().toLocaleString("en-IN")}</span>
             </div>
             <div className="flex justify-between font-medium text-base border-t pt-2">
               <span>Total Amount:</span>
-              <span>₹{calculateGrandTotal()}</span>
+              <span>₹{calculateGrandTotal().toLocaleString("en-IN")}</span>
             </div>
           </div>
         </div>
@@ -1116,5 +1130,3 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 };
 
 export default WorkOrderForm;
-
-
