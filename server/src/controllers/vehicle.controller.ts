@@ -22,6 +22,23 @@ class VehicleController {
     }
   }
 
+  async getById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const vehicles = await vehicleService.findById(id?.toString());
+      res.status(200).json({
+        success: true,
+        data: vehicles,
+      });
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch vehicles",
+      });
+    }
+  }
+
   // Get all vehicles
   async getAll(req: Request, res: Response): Promise<void> {
     try {
@@ -76,12 +93,10 @@ class VehicleController {
         return;
       }
       if (registration_number && typeof registration_number !== "string") {
-        res
-          .status(400)
-          .json({
-            success: false,
-            message: "registration_number must be a string",
-          });
+        res.status(400).json({
+          success: false,
+          message: "registration_number must be a string",
+        });
         return;
       }
 

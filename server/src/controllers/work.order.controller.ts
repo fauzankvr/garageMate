@@ -2,20 +2,45 @@ import { Request, Response } from "express";
 import workOrderService from "../services/work.order.service";
 import { WorkOrder } from "../models/work.order.model";
 import vehicleService from "../services/vehicle.service";
+import productService from "../services/product.service";
 
 class WorkOrderController {
   // Create a new work order
   async create(req: Request, res: Response): Promise<void> {
     try {
       const data = req.body as WorkOrder;
+
       if (data.vehicleId) {
-        const vehicle = await vehicleService.findById(data.vehicleId.toString());
-        if(!vehicle || !vehicle._id) throw new Error("Vehicle not found")
-        const id = vehicle._id
-        if(id){
-          await vehicleService.update(id, { serviceCount: vehicle.serviceCount + 1 });
+        const vehicle = await vehicleService.findById(
+          data.vehicleId.toString()
+        );
+        if (!vehicle || !vehicle._id) throw new Error("Vehicle not found");
+        const vehicleId = vehicle._id; // Renamed variable
+        if (vehicleId) {
+          await vehicleService.update(vehicleId, {
+            serviceCount: vehicle.serviceCount + 1,
+          });
         }
       }
+
+      if (data.products.length) {
+        // Use different variable names to avoid conflicts
+        for (const productItem of data.products) {
+          if (productItem.productId) {
+            const productId = productItem.productId.toString();
+            const product = await productService.findById(productId); // Now this is safe
+            if (!product || !product._id) throw new Error("Product not found");
+            const productDbId = product._id; // Renamed variable
+            if (productDbId) {
+              // Fixed the quantity calculation - subtract the ordered quantity
+              await productService.update(productDbId.toString(), {
+                stock: Number(product.stock) - Number(productItem.quantity),
+              });
+            }
+          }
+        }
+      }
+
       const workOrder = await workOrderService.create(data);
       res.status(201).json({
         success: true,
@@ -53,19 +78,19 @@ class WorkOrderController {
     try {
       const { id } = req.params;
       if (!id) {
-         res.status(400).json({
+        res.status(400).json({
           success: false,
           message: "Missing work order ID",
-         });
-          return;
+        });
+        return;
       }
       const workOrder = await workOrderService.findById(id);
       if (!workOrder) {
-         res.status(404).json({
+        res.status(404).json({
           success: false,
           message: "Work order not found",
-         });
-          return;
+        });
+        return;
       }
       res.status(200).json({
         success: true,
@@ -85,22 +110,22 @@ class WorkOrderController {
     try {
       const { id } = req.params;
       if (!id) {
-         res.status(400).json({
+        res.status(400).json({
           success: false,
           message: "Missing work order ID",
-         });
-          return;
+        });
+        return;
       }
       const updatedWorkOrder = await workOrderService.update(
         id,
         req.body as Partial<WorkOrder>
       );
       if (!updatedWorkOrder) {
-         res.status(404).json({
+        res.status(404).json({
           success: false,
           message: "Work order not found",
-         });
-          return;
+        });
+        return;
       }
       res.status(200).json({
         success: true,
@@ -121,15 +146,14 @@ class WorkOrderController {
     try {
       const { id } = req.params;
       if (!id) {
-         res.status(400).json({
+        res.status(400).json({
           success: false,
           message: "Missing work order ID",
         });
-
       }
       const deleted = await workOrderService.delete(id);
       if (!deleted) {
-         res.status(404).json({
+        res.status(404).json({
           success: false,
           message: "Work order not found",
         });
