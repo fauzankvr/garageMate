@@ -149,7 +149,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             const vehicleResponse = await instance.get<Vehicle>(
               `/api/vehicle/${workOrder.vehicleId}`
             );
-            setSelectedVehicle(vehicleResponse.data);
+          
+            setSelectedVehicle(vehicleResponse.data?.data);
             fetchVehiclesByCustomerId(workOrder.customerId);
           }
 
@@ -212,7 +213,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       const response = await instance.get<Vehicle[]>(
         `/api/vehicle?customerId=${customerId}`
       );
-      setVehicles(response.data);
+      setVehicles(response.data?.data);
     } catch (error) {
       console.error("Error fetching vehicles:", error);
       setVehicles([]);

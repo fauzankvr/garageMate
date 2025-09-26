@@ -6,7 +6,6 @@ import autoTable from "jspdf-autotable";
 import { Search, X, Eye, Download, Edit, Trash } from "lucide-react";
 import logoImage from "../assets/logo.png";
 import WorkOrderForm, {
-  type Product,
   type Service,
   type WorkOrder,
   type Customer,
@@ -15,19 +14,32 @@ import WorkOrderForm, {
   type PaymentDetails,
 } from "../components/ui/CreateWorkOrder";
 
-// Type definitions to match WorkOrderForm
+interface Product {
+  _id: string;
+  productName: string;
+  price: number;
+  quantity: number;
+}
+
+// Type definitions to match the populated response
 interface WorkOrderData {
-  _id: string; // Made non-optional
+  _id: string;
   customerId: Customer;
   vehicleId?: Vehicle;
   services: Service[];
-  products: Product[];
+  products: {
+    productId: Product;
+    quantity: number;
+    _id?: string;
+  }[];
   serviceCharges: ServiceCharge[];
   totalServiceCharge: number;
   totalProductCost: number;
   totalAmount: number;
   status: "pending" | "paid";
   paymentDetails: PaymentDetails;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const WorkOrderTable = () => {
@@ -48,70 +60,29 @@ const WorkOrderTable = () => {
   useEffect(() => {
     const fetchWorkOrders = async () => {
       try {
-        const res = await instance.get<{ data: any[] }>("/api/workorder");
+        const res = await instance.get<{
+          success: boolean;
+          data: WorkOrderData[];
+        }>("/api/workorder");
         console.log("Fetched work orders:", res.data.data);
 
-        const enrichedWorkOrders = await Promise.all(
-          (res.data.data || []).map(async (order) => {
-            // Fetch customer
-            const customerResponse = await instance.get<Customer>(
-              `/api/customer/${order.customerId}`
-            );
-            const customer = customerResponse.data;
+        // Directly use the populated data from backend
+        const workOrdersData = res.data.data.map((order) => ({
+          _id: order._id,
+          customerId: order.customerId,
+          vehicleId: order.vehicleId,
+          services: order.services || [],
+          products: order.products || [],
+          serviceCharges: order.serviceCharges || [],
+          totalServiceCharge: order.totalServiceCharge || 0,
+          totalProductCost: order.totalProductCost || 0,
+          totalAmount: order.totalAmount || 0,
+          status: order.status || "pending",
+          paymentDetails: order.paymentDetails || { method: "cash" },
+        }));
 
-            // Fetch vehicle if present
-            let vehicle: Vehicle | undefined;
-            if (order.vehicleId) {
-              const vehicleResponse = await instance.get<Vehicle>(
-                `/api/vehicle/${order.vehicleId}`
-              );
-              vehicle = vehicleResponse.data;
-            }
-
-            // Fetch services
-            const services = await Promise.all(
-              (order.services || []).map(async (serviceId: string) => {
-                const serviceResponse = await instance.get<Service>(
-                  `/api/service/${serviceId}`
-                );
-                return serviceResponse.data;
-              })
-            );
-
-            // Fetch products
-            const products = await Promise.all(
-              (order.products || []).map(
-                async (p: { productId: string; quantity: number }) => {
-                  const productResponse = await instance.get<Product>(
-                    `/api/product/${p.productId}`
-                  );
-                  return { ...productResponse.data, quantity: p.quantity };
-                }
-              )
-            );
-
-            return {
-              _id: order._id ?? "", // Ensure _id is present
-              customerId: customer,
-              vehicleId: vehicle,
-              services,
-              products,
-              serviceCharges: order.serviceCharges || [],
-              totalServiceCharge: order.totalServiceCharge ?? 0,
-              totalProductCost: order.totalProductCost ?? 0,
-              totalAmount: order.totalAmount ?? 0,
-              status: order.status ?? "pending",
-              paymentDetails: order.paymentDetails ?? { method: "cash" },
-            };
-          })
-        );
-
-        setWorkOrders(
-          enrichedWorkOrders.filter((order) => !!order._id) as WorkOrderData[]
-        );
-        setFilteredWorkOrders(
-          enrichedWorkOrders.filter((order) => !!order._id) as WorkOrderData[]
-        );
+        setWorkOrders(workOrdersData);
+        setFilteredWorkOrders(workOrdersData);
       } catch (err) {
         console.error("Error fetching work orders:", err);
         alert("Failed to fetch work orders. Please try again.");
@@ -190,7 +161,7 @@ const WorkOrderTable = () => {
       vehicleId: order.vehicleId?._id,
       services: order.services,
       products: order.products.map((p) => ({
-        productId: p._id,
+        productId: p.productId._id,
         quantity: p.quantity,
       })),
       serviceCharges: order.serviceCharges,
@@ -244,9 +215,7 @@ const WorkOrderTable = () => {
       `Date of Issue: ${new Date().toLocaleDateString("en-IN")}`,
       180,
       35,
-      {
-        align: "right",
-      }
+      { align: "right" }
     );
     doc.text(`Due Date: ${new Date().toLocaleDateString("en-IN")}`, 180, 40, {
       align: "right",
@@ -268,7 +237,8 @@ const WorkOrderTable = () => {
       100
     );
 
-    // Table (Services + Products + Service Charges)
+
+
     const tableData = [
       ...(workOrder.services ?? []).map((s) => [
         s.serviceName ?? "Unknown Service",
@@ -276,11 +246,11 @@ const WorkOrderTable = () => {
         `${(s.price ?? 0).toLocaleString("en-IN")}`,
         `${(s.price ?? 0).toLocaleString("en-IN")}`,
       ]),
-      ...(workOrder.products ?? []).map((p) => [
-        p.name ?? "Unknown Product",
+      ...workOrder.products.map((p) => [
+        p.productId.productName ?? "Unknown Product",
         p.quantity.toString(),
-        `${(p.price ?? 0).toLocaleString("en-IN")}`,
-        `${((p.price ?? 0) * p.quantity).toLocaleString("en-IN")}`,
+        `${(p.productId.price ?? 0).toLocaleString("en-IN")}`,
+        `${((p.productId.price ?? 0) * p.quantity).toLocaleString("en-IN")}`,
       ]),
       ...(workOrder.serviceCharges ?? []).map((c) => [
         `${c.description} (${c.for})`,
@@ -325,9 +295,7 @@ const WorkOrderTable = () => {
       `${(workOrder.totalServiceCharge ?? 0).toLocaleString("en-IN")}`,
       190,
       finalY,
-      {
-        align: "left",
-      }
+      { align: "left" }
     );
 
     doc.text("Subtotal (Products):", 120, finalY + 7);
@@ -335,9 +303,7 @@ const WorkOrderTable = () => {
       `${(workOrder.totalProductCost ?? 0).toLocaleString("en-IN")}`,
       190,
       finalY + 7,
-      {
-        align: "left",
-      }
+      { align: "left" }
     );
 
     doc.setFont("helvetica", "bold");
@@ -346,9 +312,7 @@ const WorkOrderTable = () => {
       `${(workOrder.totalAmount ?? 0).toLocaleString("en-IN")}`,
       190,
       finalY + 14,
-      {
-        align: "left",
-      }
+      { align: "left" }
     );
 
     // Notes
@@ -385,66 +349,28 @@ const WorkOrderTable = () => {
 
   const refreshWorkOrders = async () => {
     try {
-      const res = await instance.get<{ data: any[] }>("/api/workorder");
+      const res = await instance.get<{
+        success: boolean;
+        data: WorkOrderData[];
+      }>("/api/workorder");
       console.log("Refreshed work orders:", res.data.data);
 
-      const enrichedWorkOrders = await Promise.all(
-        (res.data.data || []).map(async (order) => {
-          const customerResponse = await instance.get<Customer>(
-            `/api/customer/${order.customerId}`
-          );
-          const customer = customerResponse.data;
+      const workOrdersData = res.data.data.map((order) => ({
+        _id: order._id,
+        customerId: order.customerId,
+        vehicleId: order.vehicleId,
+        services: order.services || [],
+        products: order.products || [],
+        serviceCharges: order.serviceCharges || [],
+        totalServiceCharge: order.totalServiceCharge || 0,
+        totalProductCost: order.totalProductCost || 0,
+        totalAmount: order.totalAmount || 0,
+        status: order.status || "pending",
+        paymentDetails: order.paymentDetails || { method: "cash" },
+      }));
 
-          let vehicle: Vehicle | undefined;
-          if (order.vehicleId) {
-            const vehicleResponse = await instance.get<Vehicle>(
-              `/api/vehicle/${order.vehicleId}`
-            );
-            vehicle = vehicleResponse.data;
-          }
-
-          const services = await Promise.all(
-            (order.services || []).map(async (serviceId: string) => {
-              const serviceResponse = await instance.get<Service>(
-                `/api/service/${serviceId}`
-              );
-              return serviceResponse.data;
-            })
-          );
-
-          const products = await Promise.all(
-            (order.products || []).map(
-              async (p: { productId: string; quantity: number }) => {
-                const productResponse = await instance.get<Product>(
-                  `/api/product/${p.productId}`
-                );
-                return { ...productResponse.data, quantity: p.quantity };
-              }
-            )
-          );
-
-          return {
-            _id: order._id ?? "",
-            customerId: customer,
-            vehicleId: vehicle,
-            services,
-            products,
-            serviceCharges: order.serviceCharges || [],
-            totalServiceCharge: order.totalServiceCharge ?? 0,
-            totalProductCost: order.totalProductCost ?? 0,
-            totalAmount: order.totalAmount ?? 0,
-            status: order.status ?? "pending",
-            paymentDetails: order.paymentDetails ?? { method: "cash" },
-          };
-        })
-      );
-
-      setWorkOrders(
-        enrichedWorkOrders.filter((order) => !!order._id) as WorkOrderData[]
-      );
-      setFilteredWorkOrders(
-        enrichedWorkOrders.filter((order) => !!order._id) as WorkOrderData[]
-      );
+      setWorkOrders(workOrdersData);
+      setFilteredWorkOrders(workOrdersData);
     } catch (err) {
       console.error("Error fetching work orders:", err);
       alert("Failed to fetch work orders. Please try again.");
@@ -527,10 +453,18 @@ const WorkOrderTable = () => {
                     <div
                       className="max-w-xs truncate"
                       title={
-                        order.products?.map((p) => p.name).join(", ") ?? "N/A"
+                        order.products
+                          ?.map(
+                            (p) => p.productId?.productName || "Unknown Product"
+                          )
+                          .join(", ") ?? "N/A"
                       }
                     >
-                      {order.products?.map((p) => p.name).join(", ") ?? "N/A"}
+                      {order.products
+                        ?.map(
+                          (p) => p.productId?.productName || "Unknown Product"
+                        )
+                        .join(", ") ?? "N/A"}
                     </div>
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-900">
@@ -656,7 +590,7 @@ const WorkOrderTable = () => {
 
       {/* Edit Modal */}
       {editModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium">Edit Work Order</h3>
