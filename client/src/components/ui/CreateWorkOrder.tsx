@@ -146,7 +146,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 
           // Fetch vehicle if present
           if (workOrder.vehicleId) {
-            const vehicleResponse = await instance.get<Vehicle>(
+            const vehicleResponse = await instance.get<{ data: Vehicle }>(
               `/api/vehicle/${workOrder.vehicleId}`
             );
           
@@ -210,7 +210,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   ): Promise<void> => {
     setLoadingVehicles(true);
     try {
-      const response = await instance.get<Vehicle[]>(
+      const response = await instance.get<{ data: Vehicle[] }>(
         `/api/vehicle?customerId=${customerId}`
       );
       setVehicles(response.data?.data);
