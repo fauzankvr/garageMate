@@ -69,7 +69,6 @@ const Services = () => {
     item.serviceName,
     item.description,
     item.price,
-    item.warranty,
     item.count || 0,
     <span
       className={`px-3 py-1 rounded-full text-xs font-medium ${
