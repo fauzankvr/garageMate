@@ -159,7 +159,7 @@ const Dashboard = () => {
                     Total Income
                   </p>
                   <p className="text-2xl font-bold text-green-900">
-                    ${stats.totalIncome.toLocaleString()}
+                    ₹{stats.totalIncome.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -176,7 +176,7 @@ const Dashboard = () => {
                     Total Expenses
                   </p>
                   <p className="text-2xl font-bold text-red-900">
-                    ${stats.totalExpenses.toLocaleString()}
+                    ₹{stats.totalExpenses.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -197,7 +197,7 @@ const Dashboard = () => {
                       stats.totalProfit >= 0 ? "text-blue-900" : "text-red-900"
                     }`}
                   >
-                    ${stats.totalProfit.toLocaleString()}
+                    ₹{stats.totalProfit.toLocaleString()}
                   </p>
                   {stats.totalIncome > 0 && (
                     <span
@@ -248,7 +248,7 @@ const Dashboard = () => {
                     UPI Payments
                   </p>
                   <p className="text-xl font-bold text-indigo-900">
-                    ${stats.upiIncome.toLocaleString()}
+                    ₹{stats.upiIncome.toLocaleString()}
                   </p>
                   {stats.totalIncome > 0 && (
                     <p className="text-xs text-indigo-600 mt-1">
@@ -271,7 +271,7 @@ const Dashboard = () => {
                     Cash Payments
                   </p>
                   <p className="text-xl font-bold text-orange-900">
-                    ${stats.cashIncome.toLocaleString()}
+                    ₹{stats.cashIncome.toLocaleString()}
                   </p>
                   {stats.totalIncome > 0 && (
                     <p className="text-xs text-orange-600 mt-1">
@@ -317,13 +317,13 @@ const Dashboard = () => {
                 <div className="text-center text-gray-500">
                   <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-40" />
                   <p className="text-sm">
-                    Sales: ${stats.totalIncome.toLocaleString()}
+                    Sales: ₹{stats.totalIncome.toLocaleString()}
                   </p>
                   <p className="text-sm">
-                    Expenses: ${stats.totalExpenses.toLocaleString()}
+                    Expenses: ₹{stats.totalExpenses.toLocaleString()}
                   </p>
                   <p className="text-sm font-medium mt-2">
-                    Profit: {stats.totalProfit >= 0 ? "+" : ""}$
+                    Profit: {stats.totalProfit >= 0 ? "+" : ""}₹
                     {stats.totalProfit.toLocaleString()}
                   </p>
                 </div>
@@ -345,18 +345,18 @@ const Dashboard = () => {
                     <p className="text-sm flex justify-between">
                       <span>UPI: </span>
                       <span className="font-medium">
-                        ${stats.upiIncome.toLocaleString()}
+                        ₹{stats.upiIncome.toLocaleString()}
                       </span>
                     </p>
                     <p className="text-sm flex justify-between">
                       <span>Cash: </span>
                       <span className="font-medium">
-                        ${stats.cashIncome.toLocaleString()}
+                        ₹{stats.cashIncome.toLocaleString()}
                       </span>
                     </p>
                     <p className="text-sm flex justify-between font-semibold border-t pt-2 mt-2">
                       <span>Total: </span>
-                      <span>${stats.totalIncome.toLocaleString()}</span>
+                      <span>₹{stats.totalIncome.toLocaleString()}</span>
                     </p>
                   </div>
                 </div>
@@ -398,7 +398,7 @@ const Dashboard = () => {
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-red-600">
-                          -${expense.amount.toLocaleString()}
+                          -₹{expense.amount.toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -439,7 +439,7 @@ const Dashboard = () => {
                   <UserCheck className="w-5 h-5 text-gray-400" />
                 </div>
                 <p className="text-xl font-bold text-gray-900">
-                  ${stats.servicesIncome.toLocaleString()}
+                  ₹{stats.servicesIncome.toLocaleString()}
                 </p>
                 <p className="text-sm text-blue-600 mt-1">
                   {stats.totalServices} services completed
