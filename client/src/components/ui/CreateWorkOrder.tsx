@@ -102,6 +102,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     cashAmount: 0,
     upiAmount: 0,
   });
+  const [isLoading, setIsLoading] = useState<boolean>(false); // New loading state
 
   // Search and dropdown states
   const [phoneSearch, setPhoneSearch] = useState<string>("");
@@ -149,7 +150,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             const vehicleResponse = await instance.get<{ data: Vehicle }>(
               `/api/vehicle/${workOrder.vehicleId}`
             );
-          
             setSelectedVehicle(vehicleResponse.data?.data);
             fetchVehiclesByCustomerId(workOrder.customerId);
           }
@@ -261,12 +261,12 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     }
     try {
       const vehicleData = { ...newVehicle, customerId: selectedCustomer._id };
-      const response = await instance.post<Vehicle>(
+      const response = await instance.post<{ data: Vehicle }>(
         "/api/vehicle",
         vehicleData
       );
-      setSelectedVehicle(response.data);
-      setVehicles([...vehicles, response.data]);
+      setSelectedVehicle(response.data.data);
+      setVehicles([...vehicles, response.data.data]);
       setShowVehicleModal(false);
       setNewVehicle({
         model: "",
@@ -346,6 +346,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       },
     };
 
+    setIsLoading(true); // Set loading state to true
     try {
       let response;
       if (isEdit && workOrder?._id) {
@@ -363,9 +364,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       alert(`Work Order ${isEdit ? "updated" : "created"} successfully!`);
       onSave();
       resetForm();
+      window.close(); // Close the tab on success
     } catch (error) {
       console.error("Error saving work order:", error);
       alert("Error saving work order");
+      setIsLoading(false); // Re-enable button on failure
     }
   };
 
@@ -378,6 +381,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     setPhoneSearch("");
     setVehicles([]);
     setPaymentDetails({ method: "cash", cashAmount: 0, upiAmount: 0 });
+    setIsLoading(false); // Reset loading state
   };
 
   // Event handlers
@@ -453,7 +457,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   // Calculations
   const calculateServiceTotal = (): number => {
     const servicePrice = selectedServices.reduce(
-      (sum, service) => sum + (service.price ?? 0) * (service.count ?? 1),
+      (sum, service) => sum + (service.price ?? 0),
       0
     );
     const chargeTotal = serviceCharges.reduce(
@@ -977,10 +981,42 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
         <div className="p-6">
           <button
             onClick={createOrUpdateWorkOrder}
-            disabled={!selectedCustomer}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            disabled={!selectedCustomer || isLoading}
+            className={`w-full py-3 rounded-lg flex items-center justify-center
+              ${
+                isLoading
+                  ? "bg-blue-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              } 
+              text-white disabled:bg-gray-300 disabled:cursor-not-allowed`}
           >
-            {isEdit ? "Update Work Order" : "Create Work Order"}
+            {isLoading ? (
+              <svg
+                className="animate-spin h-5 w-5 mr-2 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            ) : null}
+            {isLoading
+              ? "Processing..."
+              : isEdit
+              ? "Update Work Order"
+              : "Create Work Order"}
           </button>
         </div>
       </div>
@@ -1018,15 +1054,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                 value={newCustomer.phone}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setNewCustomer({ ...newCustomer, phone: e.target.value })
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="email"
-                placeholder="Email Address"
-                value={newCustomer.email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setNewCustomer({ ...newCustomer, email: e.target.value })
                 }
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />

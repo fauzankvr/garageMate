@@ -8,8 +8,7 @@ interface Customer {
   _id?: string;
   name: string;
   phone: string;
-  email: string;
-  vehicles: string[];
+  // vehicles: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -21,8 +20,7 @@ const Customers = () => {
   const [formData, setFormData] = useState<Partial<Customer>>({
     name: "",
     phone: "",
-    email: "",
-    vehicles: [],
+    // vehicles: [],
   });
 
   // Fetch customers from API
@@ -52,7 +50,7 @@ const Customers = () => {
       if (response.status === 201) {
         const newCustomer = response.data;
         setCustomers((prev) => [...prev, newCustomer]);
-        setFormData({ name: "", phone: "", email: "", vehicles: [] });
+        setFormData({ name: "", phone: "" });
         setIsModalOpen(false);
       } else {
         console.error("Failed to add customer");
@@ -74,7 +72,7 @@ const Customers = () => {
             cust._id === updatedCustomer._id ? updatedCustomer : cust
           )
         );
-        setFormData({ name: "", phone: "", email: "", vehicles: [] });
+        setFormData({ name: "", phone: "" });
         setCurrentCustomer(null);
         setIsModalOpen(false);
       } else {
@@ -107,25 +105,25 @@ const Customers = () => {
       setFormData({
         name: customer.name,
         phone: customer.phone,
-        email: customer.email,
-        vehicles: customer.vehicles || [],
+        // email: customer.email,
+        // vehicles: customer.vehicles || [],
       });
     } else {
       setCurrentCustomer(null);
-      setFormData({ name: "", phone: "", email: "", vehicles: [] });
+      setFormData({ name: "", phone: ""});
     }
     setIsModalOpen(true);
   };
 
   // Table headers
-  const headers = ["Name", "Phone", "Email", "Vehicles", "Status", "Actions"];
+  const headers = ["Name", "Phone",  "Status", "Actions"];
 
   // Table data
   const data = customers.map((customer) => [
     customer.name,
     customer.phone,
-    <span className="text-blue-600">{customer.email}</span>,
-    <span>{customer.vehicles.length > 0 ? customer.vehicles.join(", ") : "No vehicles"}</span>,
+    // <span className="text-blue-600">{customer.email}</span>,
+    // <span>{customer.vehicles.length > 0 ? customer.vehicles.join(", ") : "No vehicles"}</span>,
     <span
       className={`rounded-full px-3 py-1 text-xs font-medium ${
         customer.updatedAt
@@ -176,7 +174,7 @@ const Customers = () => {
 
       {/* Modal for Add/Edit Customer */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">
               {currentCustomer ? "Edit Customer" : "Add Customer"}
@@ -208,7 +206,7 @@ const Customers = () => {
                   required
                 />
               </div>
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Email
                 </label>
@@ -220,7 +218,7 @@ const Customers = () => {
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
                   required
                 />
-              </div>
+              </div> */}
               {/* Note: Vehicles field is not included in the form as it references ObjectIds. 
                  You may want to add a separate mechanism to manage vehicles if needed. */}
             </div>

@@ -16,11 +16,12 @@ import CreateCustomer from "./pages/CreateCustomer";
 import CreateVehicle from "./pages/CreateVehicle";
 
 // 🔹 Components
-import Dashboard from "./components/ui/Dashboard";
+// import Dashboard from "./components/ui/Dashboard";
 import Salaries from "./pages/Salary";
 import Vehicles from "./pages/Vehicle";
 import Expenses from "./pages/Expense";
 import Customers from "./pages/Customer";
+import Dashboard from "./components/dashboard/Dashboard";
 
 const App = () => {
   return (

@@ -9,7 +9,6 @@ const useService = () => {
     "Service Name",
     "Description",
     "Base Price",
-    "Warranty",
     "Offer Count",
     "Status",
     "Actions",
@@ -55,13 +54,6 @@ const useService = () => {
       label: "Service Description",
       type: "text",
       placeholder: "Enter Service Details",
-      value: "",
-    },
-    {
-      name: "warranty",
-      label: "Service Warranty",
-      type: "text",
-      placeholder: "Enter Service Warranty in months",
       value: "",
     },
     {
@@ -142,13 +134,6 @@ const useService = () => {
         type: "text",
         placeholder: "Enter Service Details",
         value: item.description || "",
-      },
-      {
-        name: "warranty",
-        label: "Service Warranty",
-        type: "text",
-        placeholder: "Enter Service Warranty in months",
-        value: item.warranty || "",
       },
       {
         name: "count",
