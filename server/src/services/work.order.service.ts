@@ -1,5 +1,6 @@
 import { Model, Types } from "mongoose";
 import { WorkOrder, WorkOrderModel } from "../models/work.order.model";
+import { Filter } from "./dashboard.service";
 
 class WorkOrderService {
   private workOrderModel: Model<WorkOrder>;
@@ -44,14 +45,54 @@ class WorkOrderService {
     }
   }
 
-  async findAll(): Promise<WorkOrder[]> {
+  async findAll(filter?: Filter): Promise<WorkOrder[]> {
     try {
+      let query: any = {};
+
+      // Filter by specific date (using createdAt field)
+      if (filter?.date) {
+        const targetDate = new Date(filter.date);
+        const nextDay = new Date(targetDate);
+        nextDay.setDate(targetDate.getDate() + 1);
+
+        query.createdAt = {
+          $gte: targetDate,
+          $lt: nextDay,
+        };
+      }
+
+      // Filter by year only
+      if (filter?.year && !filter.month) {
+        const startDate = new Date(`${filter.year}-01-01`);
+        const endDate = new Date(`${filter.year}-12-31`);
+        endDate.setHours(23, 59, 59, 999);
+
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+
+      // Filter by month and year
+      if (filter?.month && filter?.year) {
+        const startDate = new Date(`${filter.year}-${filter.month}-01`);
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+        endDate.setDate(0); // Last day of the month
+        endDate.setHours(23, 59, 59, 999);
+
+        query.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+
       return await this.workOrderModel
-        .find()
+        .find(query)
         .populate("customerId")
         .populate("vehicleId")
         .populate("products.productId")
-        // Remove .populate("services") since services are embedded
+        .sort({ createdAt: -1 }) // Sort by latest first
         .exec();
     } catch (error) {
       if (error instanceof Error) {

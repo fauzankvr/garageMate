@@ -1,5 +1,6 @@
 import { Model } from "mongoose";
 import { Product, ProductModel } from "../models/product.model";
+import { Filter } from "./dashboard.service";
 
 class ProductService {
   private productModel: Model<Product>;
@@ -8,9 +9,38 @@ class ProductService {
     this.productModel = ProductModel;
   }
 
-  async findAll(): Promise<Product[]> {
+  async findAll(filter?: Filter): Promise<Product[]> {
     try {
-      return await this.productModel.find().exec();
+      let query: any = {};
+
+      // Date filtering using createdAt field
+      if (filter?.date) {
+        const targetDate = new Date(filter.date);
+        const nextDay = new Date(targetDate);
+        nextDay.setDate(targetDate.getDate() + 1);
+        query.createdAt = { $gte: targetDate, $lt: nextDay };
+      } else if (filter?.year) {
+        const startDate = filter.month
+          ? new Date(`${filter.year}-${filter.month}-01`)
+          : new Date(`${filter.year}-01-01`);
+
+        const endDate = new Date(startDate);
+        if (filter.month) {
+          endDate.setMonth(endDate.getMonth() + 1);
+          endDate.setDate(0); // Last day of month
+        } else {
+          endDate.setFullYear(endDate.getFullYear() + 1);
+          endDate.setDate(0); // Last day of year
+        }
+        endDate.setHours(23, 59, 59, 999);
+
+        query.createdAt = { $gte: startDate, $lte: endDate };
+      }
+
+      return await this.productModel
+        .find(query)
+        .sort({ createdAt: -1 }) // Newest first
+        .exec();
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to fetch products: ${error.message}`);
@@ -34,11 +64,11 @@ class ProductService {
 
   async create(data: Product): Promise<Product> {
     try {
-      console.log(data)
+      console.log(data);
       const product = new this.productModel(data);
       return await product.save();
     } catch (error) {
-      console.log(error)
+      console.log(error);
       if (error instanceof Error) {
         throw new Error(`Failed to create product: ${error.message}`);
       } else {
