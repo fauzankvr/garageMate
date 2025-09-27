@@ -1,7 +1,8 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
+import { Employee } from "./employee.model";
 
 interface Salary extends Document {
-  employee: mongoose.Types.ObjectId;
+  employee: Types.ObjectId | Employee; // Union type to handle both populated and unpopulated states
   month: string; // e.g., "2025-09"
   baseSalary: number;
   bonus?: number;

@@ -205,8 +205,8 @@ class DashboardService {
     // Salaries as expenses, include employee name
     salaries.forEach(s => {
       txs.push({
-        date: new Date(s.year + "-" + s.month + "-01"),
-        desc: `Salary (${s.employee?.name || ""})`,
+        date: new Date(s.createdAt + "-" + s.month + "-01"),
+        desc: `Salary (${typeof s.employee === "object" && "name" in s.employee ? (s.employee.name as string) : ""})`,
         category: "Salary",
         in: 0,
         out: s.paid || 0,
@@ -217,10 +217,14 @@ class DashboardService {
     workOrders
       .filter(o => o.status === "paid")
       .forEach(o => {
-        const date = new Date(o.createdAt);
+        const date = new Date(o.createdAt ?? Date.now());
         txs.push({
           date,
-          desc: `Order (${o.customerId?.name || ""})`,
+          desc: `Order (${
+            typeof o.customerId === "object" && "name" in o.customerId
+              ? (o.customerId.name as string)
+              : ""
+          })`,
           category: "Bill",
           in: o.totalAmount || 0,
           out: 0,
@@ -258,7 +262,8 @@ class DashboardService {
       balance: runningBalance,
     });
 
-    return await workbook.xlsx.writeBuffer();
+    const arrayBuffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(arrayBuffer);
   }
 
   private getFilterDescription(filter: Filter): string {

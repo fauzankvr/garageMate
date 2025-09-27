@@ -1,4 +1,33 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
+
+// Define referenced interfaces (adjust fields based on your schemas)
+interface Customer {
+  _id: Types.ObjectId;
+  name: string;
+  email?: string;
+  phone?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+interface Vehicle {
+  _id: Types.ObjectId;
+  make: string;
+  model: string;
+  year: number;
+  licensePlate: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+interface Product {
+  _id: Types.ObjectId;
+  name: string;
+  price: number;
+  stock: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
 interface Service {
   warranty: string;
@@ -10,7 +39,7 @@ interface Service {
 }
 
 interface ProductItem {
-  productId: mongoose.Types.ObjectId;
+  productId: Types.ObjectId | Product; // Support populated Product
   quantity: number;
 }
 
@@ -23,12 +52,12 @@ interface PaymentDetails {
 interface ServiceCharge {
   description: string;
   price: number;
-  for: string; // e.g., "labor", "tax", "additional fee"
+  for: string;
 }
 
 interface WorkOrder extends Document {
-  customerId: mongoose.Types.ObjectId;
-  vehicleId?: mongoose.Types.ObjectId;
+  customerId: Types.ObjectId | Customer; // Support populated Customer
+  vehicleId?: Types.ObjectId | Vehicle; // Support populated Vehicle
   services: Service[];
   products: ProductItem[];
   serviceCharges: ServiceCharge[];
@@ -48,10 +77,7 @@ const WorkOrderSchema = new Schema<WorkOrder>(
       ref: "Customer",
       required: true,
     },
-    vehicleId: {
-      type: Schema.Types.ObjectId,
-      ref: "Vehicle",
-    },
+    vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
     services: [
       {
         warranty: { type: String, required: true },
@@ -82,17 +108,9 @@ const WorkOrderSchema = new Schema<WorkOrder>(
     totalProductCost: { type: Number, required: true },
     totalServiceCharge: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
-    status: {
-      type: String,
-      enum: ["pending", "paid"],
-      default: "pending",
-    },
+    status: { type: String, enum: ["pending", "paid"], default: "pending" },
     paymentDetails: {
-      method: {
-        type: String,
-        enum: ["cash", "upi", "both"],
-        required: true,
-      },
+      method: { type: String, enum: ["cash", "upi", "both"], required: true },
       cashAmount: {
         type: Number,
         required: function (this: PaymentDetails) {
@@ -110,7 +128,6 @@ const WorkOrderSchema = new Schema<WorkOrder>(
   { timestamps: true }
 );
 
-// Validation to ensure cashAmount + upiAmount = totalAmount when method is "both"
 WorkOrderSchema.pre("validate", function (next) {
   if (this.paymentDetails.method === "both") {
     const totalPaid =
@@ -131,4 +148,13 @@ export const WorkOrderModel = mongoose.model<WorkOrder>(
   "WorkOrder",
   WorkOrderSchema
 );
-export type { WorkOrder, Service, ProductItem, PaymentDetails, ServiceCharge };
+export type {
+  WorkOrder,
+  Service,
+  ProductItem,
+  PaymentDetails,
+  ServiceCharge,
+  Customer,
+  Vehicle,
+  Product,
+};
