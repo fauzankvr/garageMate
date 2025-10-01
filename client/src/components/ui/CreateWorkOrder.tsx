@@ -32,7 +32,7 @@ export interface Service {
 
 export interface Product {
   _id: string;
-  name: string;
+  productName: string; // Changed from 'name' to match WorkOrderTable
   price: number;
   quantity: number;
 }
@@ -102,7 +102,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     cashAmount: 0,
     upiAmount: 0,
   });
-  const [isLoading, setIsLoading] = useState<boolean>(false); // New loading state
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Search and dropdown states
   const [phoneSearch, setPhoneSearch] = useState<string>("");
@@ -177,8 +177,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             cashAmount: workOrder.paymentDetails.cashAmount ?? 0,
             upiAmount: workOrder.paymentDetails.upiAmount ?? 0,
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error loading work order data:", error);
+          alert(`Error loading work order data: ${error.message}`);
         }
       };
       loadData();
@@ -197,9 +198,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
         `/api/customer?phone=${phone}`
       );
       setCustomers(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error searching customers:", error);
       setCustomers([]);
+      alert(`Error searching customers: ${error.message}`);
     } finally {
       setLoadingCustomers(false);
     }
@@ -214,9 +216,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
         `/api/vehicle?customerId=${customerId}`
       );
       setVehicles(response.data?.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching vehicles:", error);
       setVehicles([]);
+      alert(`Error fetching vehicles: ${error.message}`);
     } finally {
       setLoadingVehicles(false);
     }
@@ -226,8 +229,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     try {
       const response = await instance.get<Service[]>("/api/service");
       setServices(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching services:", error);
+      alert(`Error fetching services: ${error.message}`);
     }
   };
 
@@ -235,8 +239,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     try {
       const response = await instance.get<Product[]>("/api/product");
       setProducts(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching products:", error);
+      alert(`Error fetching products: ${error.message}`);
     }
   };
 
@@ -249,8 +254,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       setSelectedCustomer(response.data);
       setShowCustomerModal(false);
       setNewCustomer({ name: "", phone: "", email: "" });
-    } catch (error) {
+      alert("Customer created successfully!");
+    } catch (error: any) {
       console.error("Error creating customer:", error);
+      alert(`Error creating customer: ${error.message}`);
     }
   };
 
@@ -274,8 +281,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
         brand: "",
         registration_number: "",
       });
-    } catch (error) {
+      alert("Vehicle added successfully!");
+    } catch (error: any) {
       console.error("Error creating vehicle:", error);
+      alert(`Error creating vehicle: ${error.message}`);
     }
   };
 
@@ -319,10 +328,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       })
     );
 
-    // Combine selectedServices and mappedServiceCharges
     const services: Service[] = [...selectedServices, ...mappedServiceCharges];
 
-    // Map selectedProducts to ProductItem objects
     const products: ProductItem[] = selectedProducts.map((product) => ({
       productId: product._id,
       quantity: product.quantity,
@@ -346,7 +353,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       },
     };
 
-    setIsLoading(true); // Set loading state to true
+    setIsLoading(true);
     try {
       let response;
       if (isEdit && workOrder?._id) {
@@ -362,13 +369,17 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       }
       console.log("Work order saved:", response.data);
       alert(`Work Order ${isEdit ? "updated" : "created"} successfully!`);
-      onSave();
+      onSave(); // Trigger table refresh
       resetForm();
-      window.close(); // Close the tab on success
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving work order:", error);
-      alert("Error saving work order");
-      setIsLoading(false); // Re-enable button on failure
+      alert(
+        `Error saving work order: ${
+          error.response?.data?.message || error.message
+        }`
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -381,7 +392,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     setPhoneSearch("");
     setVehicles([]);
     setPaymentDetails({ method: "cash", cashAmount: 0, upiAmount: 0 });
-    setIsLoading(false); // Reset loading state
+    setIsLoading(false);
   };
 
   // Event handlers
@@ -795,7 +806,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                     <X size={16} />
                   </button>
                   <div className="text-sm">
-                    <div className="font-medium">Product: {product.name}</div>
+                    <div className="font-medium">
+                      Product: {product.productName}
+                    </div>
                     <div>Quantity: {product.quantity}</div>
                     <div>
                       Price: ₹{(product.price ?? 0).toLocaleString("en-IN")}
@@ -846,7 +859,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
               <option value="">Select Product</option>
               {products.map((product) => (
                 <option key={product._id} value={product._id}>
-                  {product.name} - ₹
+                  {product.productName} - ₹
                   {(product.price ?? 0).toLocaleString("en-IN")}
                 </option>
               ))}

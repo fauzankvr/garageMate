@@ -1,4 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { debounce } from "lodash";
 import instance from "../axios/axios";
 import jsPDF from "jspdf";
@@ -21,7 +27,6 @@ interface Product {
   quantity: number;
 }
 
-// Type definitions to match the populated response
 interface WorkOrderData {
   _id: string;
   customerId: Customer;
@@ -42,7 +47,11 @@ interface WorkOrderData {
   updatedAt?: string;
 }
 
-const WorkOrderTable = () => {
+interface WorkOrderTableProps {
+  onRefresh?: () => void;
+}
+
+const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
   const [workOrders, setWorkOrders] = useState<WorkOrderData[]>([]);
   const [filteredWorkOrders, setFilteredWorkOrders] = useState<WorkOrderData[]>(
     []
@@ -57,46 +66,55 @@ const WorkOrderTable = () => {
     WorkOrder | undefined
   >(undefined);
 
+  const fetchWorkOrders = async () => {
+    try {
+      const res = await instance.get<{
+        success: boolean;
+        data: WorkOrderData[];
+      }>("/api/workorder");
+      console.log("Fetched work orders:", res.data.data);
+
+      const workOrdersData = res.data.data.map((order) => ({
+        _id: order._id,
+        customerId: order.customerId,
+        vehicleId: order.vehicleId,
+        services: order.services || [],
+        products: order.products || [],
+        serviceCharges: order.serviceCharges || [],
+        totalServiceCharge: order.totalServiceCharge || 0,
+        totalProductCost: order.totalProductCost || 0,
+        totalAmount: order.totalAmount || 0,
+        status: order.status || "pending",
+        paymentDetails: order.paymentDetails || { method: "cash" },
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      }));
+
+      setWorkOrders(workOrdersData);
+      setFilteredWorkOrders(workOrdersData);
+      onRefresh?.();
+    } catch (err: any) {
+      console.error("Error fetching work orders:", err);
+      alert(
+        `Failed to fetch work orders: ${
+          err.response?.data?.message || err.message
+        }`
+      );
+    }
+  };
+
   useEffect(() => {
-    const fetchWorkOrders = async () => {
-      try {
-        const res = await instance.get<{
-          success: boolean;
-          data: WorkOrderData[];
-        }>("/api/workorder");
-        console.log("Fetched work orders:", res.data.data);
-
-        // Directly use the populated data from backend
-        const workOrdersData = res.data.data.map((order) => ({
-          _id: order._id,
-          customerId: order.customerId,
-          vehicleId: order.vehicleId,
-          services: order.services || [],
-          products: order.products || [],
-          serviceCharges: order.serviceCharges || [],
-          totalServiceCharge: order.totalServiceCharge || 0,
-          totalProductCost: order.totalProductCost || 0,
-          totalAmount: order.totalAmount || 0,
-          status: order.status || "pending",
-          paymentDetails: order.paymentDetails || { method: "cash" },
-        }));
-
-        setWorkOrders(workOrdersData);
-        setFilteredWorkOrders(workOrdersData);
-      } catch (err) {
-        console.error("Error fetching work orders:", err);
-        alert("Failed to fetch work orders. Please try again.");
-      }
-    };
     fetchWorkOrders();
   }, []);
 
-  // Normalize phone number for search
+  useImperativeHandle(ref, () => ({
+    refresh: fetchWorkOrders,
+  }));
+
   const normalizePhone = (phone: string) => {
     return phone.replace(/[\s-+]/g, "");
   };
 
-  // Debounced search handler
   const debouncedSearch = useCallback(
     debounce((term: string) => {
       setFilteredWorkOrders(
@@ -118,7 +136,6 @@ const WorkOrderTable = () => {
     debouncedSearch(searchTerm);
   }, [searchTerm, debouncedSearch]);
 
-  // Update status
   const updateStatus = async (id: string, newStatus: "pending" | "paid") => {
     try {
       await instance.put(`/api/workorder/${id}`, { status: newStatus });
@@ -133,13 +150,14 @@ const WorkOrderTable = () => {
         )
       );
       alert("Status updated successfully!");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating status:", err);
-      alert("Error updating status");
+      alert(
+        `Error updating status: ${err.response?.data?.message || err.message}`
+      );
     }
   };
 
-  // Delete work order
   const deleteWorkOrder = async (id: string) => {
     if (!confirm("Are you sure you want to delete this work order?")) return;
     try {
@@ -147,13 +165,16 @@ const WorkOrderTable = () => {
       setWorkOrders((prev) => prev.filter((order) => order._id !== id));
       setFilteredWorkOrders((prev) => prev.filter((order) => order._id !== id));
       alert("Work Order deleted successfully!");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting work order:", err);
-      alert("Error deleting work order");
+      alert(
+        `Error deleting work order: ${
+          err.response?.data?.message || err.message
+        }`
+      );
     }
   };
 
-  // Edit work order
   const editWorkOrder = (order: WorkOrderData) => {
     setSelectedWorkOrder({
       _id: order._id,
@@ -180,9 +201,8 @@ const WorkOrderTable = () => {
   ) => {
     const doc = new jsPDF({ format: "a4" });
 
-    // Logo
     try {
-      doc.addImage(logoImage, "PNG", 14, 10, 50, 30);
+      doc.addImage(logoImage, "PNG", 13, 6, 40, 40);
     } catch (error) {
       console.error("Error loading logo:", error);
       doc.setFontSize(12);
@@ -190,7 +210,6 @@ const WorkOrderTable = () => {
       doc.text("OZON Detailing & Car Wash", 14, 20);
     }
 
-    // Company Details
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("OZON Detailing & Car Wash", 14, 45);
@@ -199,7 +218,6 @@ const WorkOrderTable = () => {
     doc.text("+91-9447405746", 14, 60);
     doc.text("info@ozondetailing.com", 14, 65);
 
-    // Header
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
     doc.text("INVOICE", 180, 20, { align: "right" });
@@ -215,13 +233,32 @@ const WorkOrderTable = () => {
       `Date of Issue: ${new Date().toLocaleDateString("en-IN")}`,
       180,
       35,
-      { align: "right" }
+      {
+        align: "right",
+      }
     );
     doc.text(`Due Date: ${new Date().toLocaleDateString("en-IN")}`, 180, 40, {
       align: "right",
     });
 
-    // Client Info
+    // Add Created At and Payment Method to invoice
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `Payment Method: ${workOrder.paymentDetails.method ?? "N/A"}`,
+      14,
+      105
+    );
+    doc.text(
+      `Created At: ${
+        workOrder.createdAt
+          ? new Date(workOrder.createdAt).toLocaleDateString("en-IN")
+          : "N/A"
+      }`,
+      14,
+      110
+    );
+
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.text("Bill To:", 14, 80);
@@ -236,8 +273,6 @@ const WorkOrderTable = () => {
       14,
       100
     );
-
-
 
     const tableData = [
       ...(workOrder.services ?? []).map((s) => [
@@ -261,7 +296,7 @@ const WorkOrderTable = () => {
     ];
 
     autoTable(doc, {
-      startY: 110,
+      startY: 120,
       head: [["Description", "Quantity", "Unit Price", "Amount"]],
       body: tableData,
       theme: "striped",
@@ -286,7 +321,6 @@ const WorkOrderTable = () => {
       },
     });
 
-    // Totals
     const finalY = (doc as any).lastAutoTable.finalY + 10;
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
@@ -315,7 +349,6 @@ const WorkOrderTable = () => {
       { align: "left" }
     );
 
-    // Notes
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.text("Notes:", 14, finalY + 35);
@@ -345,36 +378,7 @@ const WorkOrderTable = () => {
   const closeEditModal = () => {
     setEditModalOpen(false);
     setSelectedWorkOrder(undefined);
-  };
-
-  const refreshWorkOrders = async () => {
-    try {
-      const res = await instance.get<{
-        success: boolean;
-        data: WorkOrderData[];
-      }>("/api/workorder");
-      console.log("Refreshed work orders:", res.data.data);
-
-      const workOrdersData = res.data.data.map((order) => ({
-        _id: order._id,
-        customerId: order.customerId,
-        vehicleId: order.vehicleId,
-        services: order.services || [],
-        products: order.products || [],
-        serviceCharges: order.serviceCharges || [],
-        totalServiceCharge: order.totalServiceCharge || 0,
-        totalProductCost: order.totalProductCost || 0,
-        totalAmount: order.totalAmount || 0,
-        status: order.status || "pending",
-        paymentDetails: order.paymentDetails || { method: "cash" },
-      }));
-
-      setWorkOrders(workOrdersData);
-      setFilteredWorkOrders(workOrdersData);
-    } catch (err) {
-      console.error("Error fetching work orders:", err);
-      alert("Failed to fetch work orders. Please try again.");
-    }
+    fetchWorkOrders(); // Refresh after edit
   };
 
   return (
@@ -410,9 +414,9 @@ const WorkOrderTable = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Services
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Products
-                </th>
+                </th> */}
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Service Charges
                 </th>
@@ -421,6 +425,12 @@ const WorkOrderTable = () => {
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created At
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payment Method
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -449,7 +459,7 @@ const WorkOrderTable = () => {
                         "N/A"}
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-900">
+                  {/* <td className="px-4 py-4 text-sm text-gray-900">
                     <div
                       className="max-w-xs truncate"
                       title={
@@ -466,7 +476,7 @@ const WorkOrderTable = () => {
                         )
                         .join(", ") ?? "N/A"}
                     </div>
-                  </td>
+                  </td> */}
                   <td className="px-4 py-4 text-sm text-gray-900">
                     <div
                       className="max-w-xs truncate"
@@ -502,6 +512,14 @@ const WorkOrderTable = () => {
                       <option value="pending">Pending</option>
                       <option value="paid">Paid</option>
                     </select>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {order.createdAt
+                      ? new Date(order.createdAt).toLocaleDateString("en-IN")
+                      : "N/A"}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {order.paymentDetails.method ?? "N/A"}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm">
                     <div className="flex gap-2">
@@ -542,7 +560,6 @@ const WorkOrderTable = () => {
         )}
       </div>
 
-      {/* Preview Modal */}
       {previewModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full p-6">
@@ -588,7 +605,6 @@ const WorkOrderTable = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
       {editModalOpen && (
         <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-auto">
@@ -603,13 +619,13 @@ const WorkOrderTable = () => {
             </div>
             <WorkOrderForm
               workOrder={selectedWorkOrder}
-              onSave={refreshWorkOrders}
+              onSave={closeEditModal}
             />
           </div>
         </div>
       )}
     </div>
   );
-};
+});
 
 export default WorkOrderTable;

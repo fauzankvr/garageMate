@@ -57,7 +57,7 @@ const useExpense = (): UseExpenseReturn => {
   ]);
   const [editExpenseId, setEditExpenseId] = useState<string | null>(null); // Store the ID of the expense being edited
 
-  const headers = ["Category", "Amount", "Date", "Actions"];
+  const headers = ["Category","Description", "Amount", "Date", "Actions"];
 
   const fetchExpenses = async () => {
     try {

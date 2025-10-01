@@ -27,6 +27,13 @@ const ExpenseForm = ({ setExpenses, onSuccess }: ExpenseFormProps) => {
       value: "",
     },
     {
+      name: "description",
+      label: "Description",
+      type: "text",
+      placeholder: "Enter expense descripion",
+      value: "",
+    },
+    {
       name: "amount",
       label: "Amount",
       type: "number",

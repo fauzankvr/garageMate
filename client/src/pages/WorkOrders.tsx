@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Plus, X } from "lucide-react";
 import Sidebar from "../components/layout/Sidebar";
 import UserActions from "../components/layout/headers/UserActions";
@@ -7,6 +7,7 @@ import WorkOrderTable from "./WorkOrderTable";
 
 const WorkOrders = () => {
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const workOrderTableRef = useRef<{ refresh: () => void } | null>(null);
 
   const handleCreateWorkOrder = () => {
     setShowCreateModal(true);
@@ -14,6 +15,7 @@ const WorkOrders = () => {
 
   const handleCloseModal = () => {
     setShowCreateModal(false);
+    workOrderTableRef.current?.refresh(); // Refresh table after creating new bill
   };
 
   return (
@@ -44,7 +46,12 @@ const WorkOrders = () => {
 
         {/* Table */}
         <div className="overflow-x-auto bg-white shadow rounded-lg">
-          <WorkOrderTable />
+          <WorkOrderTable
+            ref={workOrderTableRef}
+            onRefresh={() => {
+              console.log("Table refreshed from WorkOrders");
+            }}
+          />
         </div>
 
         {/* Create Work Order Modal */}

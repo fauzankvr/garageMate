@@ -21,6 +21,7 @@ import Salaries from "./pages/Salary";
 import Vehicles from "./pages/Vehicle";
 import Expenses from "./pages/Expense";
 import Customers from "./pages/Customer";
+import Warranty from "./pages/Warranty"
 import Dashboard from "./components/dashboard/Dashboard";
 
 const App = () => {
@@ -45,7 +46,8 @@ const App = () => {
         <Route path="/salaries" element={<Salaries />} />
         <Route path="/vehicle" element={<Vehicles />} />
         <Route path="/expenses" element={<Expenses />} />
-        <Route path="/customers" element={ <Customers/>} />
+        <Route path="/customers" element={<Customers />} />
+        <Route path="/warranty" element={ <Warranty/>} />
 
         {/* Services & Orders */}
         <Route path="/services" element={<Services />} />

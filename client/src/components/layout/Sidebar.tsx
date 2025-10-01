@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, Users, PlusCircle, UserSquare2, Car, Users2 } from "lucide-react";
+import { Home, Users, PlusCircle, UserSquare2, Car, Users2, ShieldCheck } from "lucide-react";
 import { AiFillDollarCircle, AiFillProduct } from "react-icons/ai";
-import { FaMoneyBillWave } from "react-icons/fa";
+// import { FaMoneyBillWave } from "react-icons/fa";
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -37,16 +37,22 @@ const Sidebar = () => {
       path: "/expenses",
       icon: <AiFillDollarCircle className="w-5 h-5" />,
     },
+    // {
+    //   name: "Salaries",
+    //   path: "/salaries",
+    //   icon: <FaMoneyBillWave className="w-5 h-5" />,
+    // },
+    // {
+    //   name: "Employees",
+    //   path: "/employees",
+    //   icon: <UserSquare2 className="w-5 h-5" />,
+    // },
     {
-      name: "Salaries",
-      path: "/salaries",
-      icon: <FaMoneyBillWave className="w-5 h-5" />,
+      name: "Warranty",
+      path: "/warranty",
+      icon: <ShieldCheck className="w-5 h-5" />,
     },
-    {
-      name: "Employees",
-      path: "/employees",
-      icon: <UserSquare2 className="w-5 h-5" />,
-    },
+
     {
       name: "Customers",
       path: "/customers",
