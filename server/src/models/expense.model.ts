@@ -2,6 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 interface Expense extends Document {
   category: string; 
+  description: string;
   amount: number;
   date: Date;
   createdAt?: Date;
@@ -11,6 +12,7 @@ interface Expense extends Document {
 const ExpenseSchema = new Schema<Expense>(
   {
     category: { type: String, required: true },
+    description:{type:String,required:true},
     amount: { type: Number, required: true },
    date: { type: Date, required: true },
   },

@@ -12,6 +12,7 @@ import employeeRoutes from "./routes/employee.routes";
 import salaryRoutes from "./routes/salary.routes";
 import expenseRoutes from "./routes/expense.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
+import warrantyRoutes from "./routes/warranty.routes";
 
 dotenv.config();
 
@@ -28,7 +29,8 @@ app.use("/api/vehicle", vehicleRoutes);
 app.use("/api/employee", employeeRoutes);
 app.use("/api/salaries", salaryRoutes);
 app.use("/api/expense", expenseRoutes);
-app.use("/api/dashboard",dashboardRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/warranties", warrantyRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello, world!");
