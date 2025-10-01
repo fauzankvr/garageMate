@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, Users, PlusCircle, UserSquare2, Car, Users2, ShieldCheck } from "lucide-react";
+import { Home, Users, PlusCircle, Car, Users2, ShieldCheck } from "lucide-react";
 import { AiFillDollarCircle, AiFillProduct } from "react-icons/ai";
 // import { FaMoneyBillWave } from "react-icons/fa";
 

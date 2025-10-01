@@ -171,7 +171,7 @@ const Warranties = () => {
             Delete
           </button>
         </div>,
-      ] as (string | number | JSX.Element)[]
+      ] as (string | number )[]
   );
 
   return (
@@ -238,7 +238,7 @@ const Warranties = () => {
                         setEditError(null);
                       }}
                       className="w-full"
-                      disabled={isEditLoading}
+                    //   disabled={isEditLoading}
                       aria-invalid={!!editError}
                       aria-describedby={
                         editError ? `${field.name}-error` : undefined
