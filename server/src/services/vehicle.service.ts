@@ -27,9 +27,9 @@ class VehicleService {
   async findAll(customerId?: string): Promise<Vehicle[]> {
     try {
       if (customerId) {
-        return await this.vehicleModel.find({ customerId }).exec();
+        return await this.vehicleModel.find({ customerId }).populate("customerId").exec();
       }
-      return await this.vehicleModel.find().exec(); // return all vehicles
+      return await this.vehicleModel.find().populate("customerId").exec(); // return all vehicles
     } catch (error) {
       throw new Error(`Failed to fetch vehicles: ${error}`);
     }

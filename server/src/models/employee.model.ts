@@ -12,7 +12,7 @@ const EmployeeSchema = new Schema<Employee>(
   {
     phone: { type: String, required: true, unique: true },
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String},
   },
   { timestamps: true }
 );
