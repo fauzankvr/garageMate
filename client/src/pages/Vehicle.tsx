@@ -19,7 +19,7 @@ interface Vehicle {
   // year: string;
   // brand: string;
   registration_number: string;
-  customerId: string;
+  customerId: string|Customer;
   customerName?: string; // Added for display
   serviceCount: number;
   createdAt?: string;
@@ -304,7 +304,7 @@ const Vehicles = () => {
     // vehicle.brand || "N/A",
     vehicle.registration_number || "N/A",
     <span>
-      {vehicle.customerId.name || vehicle.customerId || "N/A"}
+     {typeof vehicle.customerId === "string" ? vehicle.customerId : vehicle.customerId.name || "N/A"} 
     </span>,
     <span
       className={`text-sm font-medium ${
