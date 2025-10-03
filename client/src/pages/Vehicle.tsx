@@ -16,8 +16,8 @@ interface Customer {
 interface Vehicle {
   _id?: string;
   model: string;
-  year: string;
-  brand: string;
+  // year: string;
+  // brand: string;
   registration_number: string;
   customerId: string;
   customerName?: string; // Added for display
@@ -41,8 +41,8 @@ const Vehicles = () => {
   const [currentVehicle, setCurrentVehicle] = useState<Vehicle | null>(null);
   const [formData, setFormData] = useState<Partial<Vehicle>>({
     model: "",
-    year: "",
-    brand: "",
+    // year: "",
+    // brand: "",
     registration_number: "",
     customerId: "",
   });
@@ -190,8 +190,8 @@ const Vehicles = () => {
         setFilteredVehicles((prev) => [...prev, newVehicle]);
         setFormData({
           model: "",
-          year: "",
-          brand: "",
+          // year: "",
+          // brand: "",
           registration_number: "",
           customerId: "",
         });
@@ -234,8 +234,8 @@ const Vehicles = () => {
         );
         setFormData({
           model: "",
-          year: "",
-          brand: "",
+          // year: "",
+          // brand: "",
           registration_number: "",
           customerId: "",
         });
@@ -276,8 +276,8 @@ const Vehicles = () => {
     setCurrentVehicle(vehicle);
     setFormData({
       model: vehicle.model,
-      year: vehicle.year,
-      brand: vehicle.brand,
+      // year: vehicle.year,
+      // brand: vehicle.brand,
       registration_number: vehicle.registration_number,
       customerId: vehicle.customerId,
     });
@@ -288,8 +288,8 @@ const Vehicles = () => {
   // Table headers
   const headers = [
     "Model",
-    "Year",
-    "Brand",
+    // "Year",
+    // "Brand",
     "Registration Number",
     "Customer",
     "Service Count",
@@ -300,11 +300,11 @@ const Vehicles = () => {
   // Table data
   const data = filteredVehicles.map((vehicle) => [
     vehicle.model || "N/A",
-    vehicle.year || "N/A",
-    vehicle.brand || "N/A",
+    // vehicle.year || "N/A",
+    // vehicle.brand || "N/A",
     vehicle.registration_number || "N/A",
-    <span className="text-blue-600">
-      {vehicle.customerName || vehicle.customerId || "N/A"}
+    <span>
+      {vehicle.customerId.name || vehicle.customerId || "N/A"}
     </span>,
     <span
       className={`text-sm font-medium ${
@@ -428,7 +428,7 @@ const Vehicles = () => {
                     required
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
                     Year
                   </label>
@@ -455,7 +455,7 @@ const Vehicles = () => {
                     placeholder="Enter vehicle brand"
                     required
                   />
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
                     Registration Number
@@ -567,7 +567,7 @@ const Vehicles = () => {
                     required
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
                     Year
                   </label>
@@ -594,7 +594,7 @@ const Vehicles = () => {
                     placeholder="Enter vehicle brand"
                     required
                   />
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
                     Registration Number

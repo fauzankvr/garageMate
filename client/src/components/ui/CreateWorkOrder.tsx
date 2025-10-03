@@ -13,8 +13,8 @@ export interface Customer {
 export interface Vehicle {
   _id: string;
   model: string;
-  year: string;
-  brand: string;
+  // year: string;
+  // brand: string;
   registration_number: string;
   serviceCount: number;
   customerId: string;
@@ -56,8 +56,8 @@ export interface NewCustomer {
 
 export interface NewVehicle {
   model: string;
-  year: string;
-  brand: string;
+  // year: string;
+  // brand: string;
   registration_number: string;
 }
 
@@ -127,8 +127,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   });
   const [newVehicle, setNewVehicle] = useState<NewVehicle>({
     model: "",
-    year: "",
-    brand: "",
+    // year: "",
+    // brand: "",
     registration_number: "",
   });
 
@@ -277,8 +277,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       setShowVehicleModal(false);
       setNewVehicle({
         model: "",
-        year: "",
-        brand: "",
+        // year: "",
+        // brand: "",
         registration_number: "",
       });
       alert("Vehicle added successfully!");
@@ -600,7 +600,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                       Model: {selectedVehicle.model}
                     </div>
                     <div>Reg No: {selectedVehicle.registration_number}</div>
-                    <div>Brand: {selectedVehicle.brand}</div>
+                    {/* <div>Brand: {selectedVehicle.brand}</div> */}
                     <div className="mt-2">
                       <span
                         className={`inline-block text-sm font-medium ${
@@ -1117,7 +1117,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                 }
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
-              <input
+              {/* <input
                 type="text"
                 placeholder="Year"
                 value={newVehicle.year}
@@ -1134,7 +1134,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                   setNewVehicle({ ...newVehicle, brand: e.target.value })
                 }
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+              /> */}
               <input
                 type="text"
                 placeholder="Registration Number"

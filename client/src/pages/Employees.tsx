@@ -3,6 +3,7 @@ import Table from "../components/ui/Table"; // Adjust import path
 import Sidebar from "../components/layout/Sidebar";
 import UserActions from "../components/layout/headers/UserActions";
 import instance from "../axios/axios";
+import { X } from "lucide-react";
 
 interface Employee {
   _id?: string;
@@ -172,65 +173,103 @@ const Employees = () => {
 
       {/* Modal for Add/Edit Employee */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">
-              {currentEmployee ? "Edit Employee" : "Add Employee"}
-            </h2>
-            <div className="space-y-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 transition-opacity duration-300"
+          role="dialog"
+          aria-labelledby="modal-title"
+          aria-modal="true"
+        >
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-8 transform transition-all duration-300 scale-100">
+            <div className="flex justify-between items-center mb-6">
+              <h2 id="modal-title" className="text-2xl font-bold text-gray-800">
+                {currentEmployee ? "Edit Employee" : "Add Employee"}
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1"
+                aria-label="Close modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                currentEmployee ? handleEditEmployee() : handleAddEmployee();
+              }}
+              className="space-y-6"
+            >
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Name
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                  placeholder="Enter employee name"
                   required
+                  aria-required="true"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Phone
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Phone <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  id="phone"
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                  placeholder="Enter phone number"
                   required
+                  aria-required="true"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Email (optional)
                 </label>
                 <input
                   type="email"
+                  id="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                  placeholder="Enter email address"
                 />
               </div>
-            </div>
-            <div className="mt-6 flex justify-end space-x-2">
-              <button
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
-                onClick={() => setIsModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                onClick={currentEmployee ? handleEditEmployee : handleAddEmployee}
-              >
-                {currentEmployee ? "Update" : "Add"}
-              </button>
-            </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  {currentEmployee ? "Update" : "Add"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
