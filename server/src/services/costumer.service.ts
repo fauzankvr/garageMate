@@ -13,7 +13,8 @@ class CustomerService {
       const customer = new this.customerModel(data);
       return await customer.save();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to create customer: ${errorMessage}`);
     }
   }
@@ -22,17 +23,28 @@ class CustomerService {
     try {
       return await this.customerModel.find().exec();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to fetch customers: ${errorMessage}`);
     }
   }
 
   async findByPhone(phone: string): Promise<Customer[]> {
     try {
-      return await this.customerModel.find({ phone }).exec();
+      // Trim and convert phone to string
+      phone = phone.trim().toString();
+      console.log(phone);
+      // Create regex to match the first 5 or 6 digits of the phone number
+      const firstFiveDigits = phone.slice(0, 5);
+      const firstSixDigits = phone.slice(0, 6);
+      const regexPattern = `^(${firstFiveDigits}|${firstSixDigits})`;
+
+      // Use regex to find customers with matching phone numbers
+      return await this.customerModel
+        .find({ phone: { $regex: regexPattern, $options: "i" } })
+        .exec();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to fetch customer by phone: ${errorMessage}`);
+      throw new Error(`Failed to find customers by phone: ${error}`);
     }
   }
 
@@ -40,7 +52,8 @@ class CustomerService {
     try {
       return await this.customerModel.findById(id).exec();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to fetch customer: ${errorMessage}`);
     }
   }
@@ -51,7 +64,8 @@ class CustomerService {
         .findByIdAndUpdate(id, data, { new: true })
         .exec();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to update customer: ${errorMessage}`);
     }
   }
@@ -61,7 +75,8 @@ class CustomerService {
       const result = await this.customerModel.findByIdAndDelete(id).exec();
       return !!result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to delete customer: ${errorMessage}`);
     }
   }

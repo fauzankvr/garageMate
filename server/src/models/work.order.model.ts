@@ -56,6 +56,7 @@ interface ServiceCharge {
 }
 
 interface WorkOrder extends Document {
+  serialNumber: string;
   customerId: Types.ObjectId | Customer; // Support populated Customer
   vehicleId?: Types.ObjectId | Vehicle; // Support populated Vehicle
   services: Service[];
@@ -72,6 +73,7 @@ interface WorkOrder extends Document {
 
 const WorkOrderSchema = new Schema<WorkOrder>(
   {
+    serialNumber: { type: String, required: true, unique: true },
     customerId: {
       type: Schema.Types.ObjectId,
       ref: "Customer",

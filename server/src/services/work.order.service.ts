@@ -1,6 +1,7 @@
 import { Model, Types } from "mongoose";
 import { WorkOrder, WorkOrderModel } from "../models/work.order.model";
 import { Filter } from "./dashboard.service";
+import { CounterModel } from "../models/counter.model";
 
 class WorkOrderService {
   private workOrderModel: Model<WorkOrder>;
@@ -9,9 +10,25 @@ class WorkOrderService {
     this.workOrderModel = WorkOrderModel;
   }
 
+  private async getNextSequence(counterId: string): Promise<number> {
+    try {
+      const counter = await CounterModel.findOneAndUpdate(
+        { _id: counterId },
+        { $inc: { sequence_value: 1 } }, // Atomically increment the sequence
+        {
+          new: true, // Return the updated document
+          upsert: true, // Create the counter if it doesn't exist
+        }
+      );
+      return counter.sequence_value;
+    } catch (error) {
+      throw new Error(`Failed to get next sequence: ${error}`);
+    }
+  }
+
   async create(data: any): Promise<WorkOrder> {
     try {
-      console.log("daa...", data);
+      console.log("data...", data);
 
       // Remove temporary IDs from services (IDs that start with 'temp-')
       const sanitizedData = {
@@ -25,7 +42,17 @@ class WorkOrderService {
         }),
       };
 
-      const workOrder = new this.workOrderModel(sanitizedData);
+      // Generate the serial number
+      const sequence = await this.getNextSequence("work_order_sequence");
+      const serialNumber = `INV-${sequence.toString().padStart(3, "0")}`; // e.g., WO001
+
+      // Add serialNumber to the data
+      const workOrderData = {
+        ...sanitizedData,
+        serialNumber,
+      };
+
+      const workOrder = new this.workOrderModel(workOrderData);
       console.log(workOrder);
 
       const savedWorkOrder = await workOrder.save();

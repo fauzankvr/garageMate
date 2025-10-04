@@ -21,7 +21,7 @@ class CustomerController {
   }
 
   async getByPhone(req: Request, res: Response): Promise<void> {
-    const { phone } = req.query;
+    const { phone } = req.params;
     if (!phone) {
       res.status(400).json({ message: "Phone number is required" });
       return;
