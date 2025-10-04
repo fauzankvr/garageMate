@@ -29,6 +29,7 @@ interface Product {
 
 interface WorkOrderData {
   _id: string;
+  serialNumber: string;
   customerId: Customer;
   vehicleId?: Vehicle;
   services: Service[];
@@ -76,6 +77,7 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
 
       const workOrdersData = res.data.data.map((order) => ({
         _id: order._id,
+        serialNumber:order.serialNumber,
         customerId: order.customerId,
         vehicleId: order.vehicleId,
         services: order.services || [],
@@ -178,6 +180,7 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
   const editWorkOrder = (order: WorkOrderData) => {
     setSelectedWorkOrder({
       _id: order._id,
+      // serialNumber:order.serialNumber,
       customerId: order.customerId._id,
       vehicleId: order.vehicleId?._id,
       services: order.services,
@@ -224,11 +227,11 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    const invoiceNumber = `INV-${Math.random()
-      .toString(36)
-      .substr(2, 6)
-      .toUpperCase()}`;
-    doc.text(`Invoice Number: ${invoiceNumber}`, 180, 30, { align: "right" });
+    // const invoiceNumber = `INV-${Math.random()
+    //   .toString(36)
+    //   .substr(2, 6)
+    //   .toUpperCase()}`;
+    doc.text(`Invoice Number: ${workOrder.serialNumber}`, 180, 30, { align: "right" });
     doc.text(
       `Date of Issue: ${new Date().toLocaleDateString("en-IN")}`,
       180,
@@ -561,7 +564,7 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
       </div>
 
       {previewModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium">Invoice Preview</h3>

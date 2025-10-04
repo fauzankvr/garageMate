@@ -30,7 +30,7 @@ const ExpenseForm = ({ setExpenses, onSuccess }: ExpenseFormProps) => {
       name: "description",
       label: "Description",
       type: "text",
-      placeholder: "Enter expense descripion",
+      placeholder: "Enter expense description",
       value: "",
     },
     {
@@ -113,6 +113,10 @@ const ExpenseForm = ({ setExpenses, onSuccess }: ExpenseFormProps) => {
     }
   };
 
+  const handleClose = () => {
+    if (onSuccess) onSuccess(); // Trigger the onSuccess callback to close the modal
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -136,10 +140,10 @@ const ExpenseForm = ({ setExpenses, onSuccess }: ExpenseFormProps) => {
           />
         </div>
       ))}
-      <div className="md:col-span-2">
+      <div className="md:col-span-2 flex gap-4">
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:bg-blue-400 disabled:cursor-not-allowed"
+          className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:bg-blue-400 disabled:cursor-not-allowed"
           disabled={isLoading}
         >
           {isLoading ? (
@@ -169,6 +173,14 @@ const ExpenseForm = ({ setExpenses, onSuccess }: ExpenseFormProps) => {
           ) : (
             "Submit"
           )}
+        </button>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-400 transition disabled:bg-gray-200 disabled:cursor-not-allowed"
+          disabled={isLoading}
+        >
+          Close
         </button>
       </div>
     </form>

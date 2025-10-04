@@ -9,7 +9,7 @@ interface Employee {
   _id?: string;
   name: string;
   phone: string;
-  email?: string;
+  // email?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -21,7 +21,7 @@ const Employees = () => {
   const [formData, setFormData] = useState<Partial<Employee>>({
     name: "",
     phone: "",
-    email: "",
+    // email: "",
   });
 
   // Fetch employees from API
@@ -51,7 +51,7 @@ const Employees = () => {
       if (response.status === 201) {
         const newEmployee = response.data;
         setEmployees((prev) => [...prev, newEmployee]);
-        setFormData({ name: "", phone: "", email: "" });
+        setFormData({ name: "", phone: "" });
         setIsModalOpen(false);
       } else {
         console.error("Failed to add employee");
@@ -73,7 +73,7 @@ const Employees = () => {
             emp._id === updatedEmployee._id ? updatedEmployee : emp
           )
         );
-        setFormData({ name: "", phone: "", email: "" });
+        setFormData({ name: "", phone: "",  });
         setCurrentEmployee(null);
         setIsModalOpen(false);
       } else {
@@ -106,23 +106,23 @@ const Employees = () => {
       setFormData({
         name: employee.name,
         phone: employee.phone,
-        email: employee.email || "",
+        // email: employee.email || "",
       });
     } else {
       setCurrentEmployee(null);
-      setFormData({ name: "", phone: "", email: "" });
+      setFormData({ name: "", phone: "" });
     }
     setIsModalOpen(true);
   };
 
   // Table headers
-  const headers = ["Name", "Phone", "Email", "Status", "Actions"];
+  const headers = ["Name", "Phone",  "Status", "Actions"];
 
   // Table data
   const data = employees.map((employee) => [
     employee.name,
     employee.phone,
-    <span className="text-blue-600">{employee.email || "N/A"}</span>,
+    // <span className="text-blue-600">{employee.email || "N/A"}</span>,
     <span
       className={`rounded-full px-3 py-1 text-xs font-medium ${
         employee.updatedAt
@@ -174,7 +174,7 @@ const Employees = () => {
       {/* Modal for Add/Edit Employee */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 transition-opacity duration-300"
+          className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-opacity duration-300"
           role="dialog"
           aria-labelledby="modal-title"
           aria-modal="true"
@@ -237,7 +237,7 @@ const Employees = () => {
                   aria-required="true"
                 />
               </div>
-              <div>
+              {/* <div>
                 <label
                   htmlFor="email"
                   className="block text-sm font-medium text-gray-700 mb-1"
@@ -253,7 +253,7 @@ const Employees = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                   placeholder="Enter email address"
                 />
-              </div>
+              </div> */}
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"

@@ -69,6 +69,7 @@ export interface PaymentDetails {
 
 export interface WorkOrder {
   _id?: string;
+  // serialNumber: string;
   customerId: string;
   vehicleId?: string;
   services: Service[];
@@ -188,14 +189,14 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 
   // API calls
   const searchCustomerByPhone = async (phone: string): Promise<void> => {
-    if (phone.length < 10) {
+    if (phone.length < 5) {
       setCustomers([]);
       return;
     }
     setLoadingCustomers(true);
     try {
       const response = await instance.get<Customer[]>(
-        `/api/customer?phone=${phone}`
+        `/api/customer/phone/${phone}`
       );
       setCustomers(response.data);
     } catch (error: any) {
