@@ -1,7 +1,16 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, Users, PlusCircle, Car, Users2, ShieldCheck, UserSquare2 } from "lucide-react";
+import {
+  Home,
+  Users,
+  PlusCircle,
+  Car,
+  Users2,
+  ShieldCheck,
+  UserSquare2,
+} from "lucide-react";
 import { AiFillDollarCircle, AiFillProduct } from "react-icons/ai";
 import { FaMoneyBillWave } from "react-icons/fa";
+import { ArrowLeft, RefreshCw } from "lucide-react"; // Added icons for back and reload
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -52,7 +61,6 @@ const Sidebar = () => {
       path: "/warranty",
       icon: <ShieldCheck className="w-5 h-5" />,
     },
-
     {
       name: "Customers",
       path: "/customers",
@@ -62,6 +70,24 @@ const Sidebar = () => {
 
   return (
     <div className="sticky top-0 h-screen w-56 bg-gray-50 border-r border-gray-200 p-4 flex flex-col sidebar">
+      {/* Reload and Back Buttons */}
+      <div className="flex justify-between mb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition"
+          title="Go Back"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => window.location.reload()}
+          className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition"
+          title="Reload Page"
+        >
+          <RefreshCw className="w-5 h-5" />
+        </button>
+      </div>
+
       {/* Logo / Title */}
       <h1
         className="text-lg font-bold mb-8 text-center cursor-pointer"
