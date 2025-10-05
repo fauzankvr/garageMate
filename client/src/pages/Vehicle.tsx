@@ -10,17 +10,14 @@ interface Customer {
   _id: string;
   name: string;
   phone: string;
-  email: string;
 }
 
 interface Vehicle {
   _id?: string;
   model: string;
-  // year: string;
-  // brand: string;
   registration_number: string;
-  customerId: string|Customer;
-  customerName?: string; // Added for display
+  customerId: string | Customer;
+  customerName: string;
   serviceCount: number;
   createdAt?: string;
   updatedAt?: string;
@@ -29,7 +26,6 @@ interface Vehicle {
 interface NewCustomer {
   name: string;
   phone: string;
-  email: string;
 }
 
 const Vehicles = () => {
@@ -41,15 +37,13 @@ const Vehicles = () => {
   const [currentVehicle, setCurrentVehicle] = useState<Vehicle | null>(null);
   const [formData, setFormData] = useState<Partial<Vehicle>>({
     model: "",
-    // year: "",
-    // brand: "",
     registration_number: "",
     customerId: "",
+    customerName: "",
   });
   const [newCustomer, setNewCustomer] = useState<NewCustomer>({
     name: "",
     phone: "",
-    email: "",
   });
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [customerSearchTerm, setCustomerSearchTerm] = useState<string>("");
@@ -59,6 +53,19 @@ const Vehicles = () => {
   const [error, setError] = useState<string | null>(null);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
 
+  // Normalize vehicle data to ensure customerName is populated
+  const normalizeVehicle = (vehicle: any): Vehicle => ({
+    ...vehicle,
+    customerName:
+      typeof vehicle.customerId === "object" && vehicle.customerId?.name
+        ? vehicle.customerId.name
+        : vehicle.customerName || "N/A",
+    customerId:
+      typeof vehicle.customerId === "object"
+        ? vehicle.customerId._id
+        : vehicle.customerId || "",
+  });
+
   // Fetch vehicles from API
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -67,8 +74,11 @@ const Vehicles = () => {
         const response = await instance.get("/api/vehicle");
         console.log("API Response:", response.data);
         const data = response.data.data || response.data;
-        setVehicles(Array.isArray(data) ? data : []);
-        setFilteredVehicles(Array.isArray(data) ? data : []);
+        const normalizedVehicles = Array.isArray(data)
+          ? data.map(normalizeVehicle)
+          : [];
+        setVehicles(normalizedVehicles);
+        setFilteredVehicles(normalizedVehicles);
         setLoading(false);
       } catch (error: any) {
         console.error("Error fetching vehicles:", error);
@@ -149,9 +159,14 @@ const Vehicles = () => {
 
   // Handle customer selection
   const handleCustomerSelect = (customer: Customer) => {
-    setFormData((prev) => ({ ...prev, customerId: customer._id }));
+    setFormData((prev) => ({
+      ...prev,
+      customerId: customer._id,
+      customerName: customer.name,
+    }));
     setCustomerSearchTerm(customer.name);
     setFilteredCustomers([]);
+    setError(null); // Clear any errors when a customer is selected
   };
 
   // Create new customer
@@ -162,12 +177,18 @@ const Vehicles = () => {
         newCustomer
       );
       console.log("Create Customer Response:", response.data);
-      setCustomers((prev) => [...prev, response.data]);
-      setFilteredCustomers((prev) => [...prev, response.data]);
-      setFormData((prev) => ({ ...prev, customerId: response.data._id }));
-      setCustomerSearchTerm(response.data.name);
-      setNewCustomer({ name: "", phone: "", email: "" });
+      const newCustomerData = response.data;
+      setCustomers((prev) => [...prev, newCustomerData]);
+      setFilteredCustomers((prev) => [...prev, newCustomerData]);
+      setFormData((prev) => ({
+        ...prev,
+        customerId: newCustomerData._id,
+        customerName: newCustomerData.name,
+      }));
+      setCustomerSearchTerm(newCustomerData.name);
+      setNewCustomer({ name: "", phone: "" });
       setIsCustomerModalOpen(false);
+      setError(null); // Clear any errors
     } catch (error: any) {
       console.error("Error creating customer:", error);
       setError("Failed to create customer. Please try again.");
@@ -177,26 +198,28 @@ const Vehicles = () => {
   // Handle adding a new vehicle
   const handleAddVehicle = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("Form Data before submission:", formData); // Debug log
     if (!formData.customerId) {
       setError("Please select a customer.");
       return;
     }
     try {
-      const response = await instance.post("/api/vehicle", formData);
-      console.log("Add Vehicle Response:", response.data);
+      const { customerName, ...apiFormData } = formData;
+      const response = await instance.post("/api/vehicle", apiFormData);
+      console.log("Add Vehicle Response:", response.data.data);
       if (response.status === 201) {
-        const newVehicle = response.data.data;
+        const newVehicle = normalizeVehicle(response.data.data);
         setVehicles((prev) => [...prev, newVehicle]);
         setFilteredVehicles((prev) => [...prev, newVehicle]);
         setFormData({
           model: "",
-          // year: "",
-          // brand: "",
           registration_number: "",
           customerId: "",
+          customerName: "",
         });
         setCustomerSearchTerm("");
         setIsAddModalOpen(false);
+        setError(null); // Clear any errors
       } else {
         console.error("Failed to add vehicle");
         setError("Failed to add vehicle.");
@@ -215,13 +238,14 @@ const Vehicles = () => {
       return;
     }
     try {
+      const { customerName, ...apiFormData } = formData;
       const response = await instance.put(
         `/api/vehicle/${currentVehicle._id}`,
-        formData
+        apiFormData
       );
       console.log("Edit Vehicle Response:", response.data);
       if (response.status === 200) {
-        const updatedVehicle = response.data;
+        const updatedVehicle = normalizeVehicle(response.data);
         setVehicles((prev) =>
           prev.map((veh) =>
             veh._id === updatedVehicle._id ? updatedVehicle : veh
@@ -234,14 +258,14 @@ const Vehicles = () => {
         );
         setFormData({
           model: "",
-          // year: "",
-          // brand: "",
           registration_number: "",
           customerId: "",
+          customerName: "",
         });
         setCustomerSearchTerm("");
         setCurrentVehicle(null);
         setIsEditModalOpen(false);
+        setError(null); // Clear any errors
       } else {
         console.error("Failed to update vehicle");
         setError("Failed to update vehicle.");
@@ -261,6 +285,7 @@ const Vehicles = () => {
       if (response.status === 200) {
         setVehicles((prev) => prev.filter((veh) => veh._id !== id));
         setFilteredVehicles((prev) => prev.filter((veh) => veh._id !== id));
+        setError(null); // Clear any errors
       } else {
         console.error("Failed to delete vehicle");
         setError("Failed to delete vehicle.");
@@ -276,20 +301,21 @@ const Vehicles = () => {
     setCurrentVehicle(vehicle);
     setFormData({
       model: vehicle.model,
-      // year: vehicle.year,
-      // brand: vehicle.brand,
       registration_number: vehicle.registration_number,
-      customerId: vehicle.customerId,
+      customerId:
+        typeof vehicle.customerId === "string"
+          ? vehicle.customerId
+          : vehicle.customerId._id,
+      customerName: vehicle.customerName,
     });
-    setCustomerSearchTerm(vehicle.customerName || "");
+    setCustomerSearchTerm(vehicle.customerName);
     setIsEditModalOpen(true);
+    setError(null); // Clear any errors
   };
 
   // Table headers
   const headers = [
     "Model",
-    // "Year",
-    // "Brand",
     "Registration Number",
     "Customer",
     "Service Count",
@@ -300,12 +326,8 @@ const Vehicles = () => {
   // Table data
   const data = filteredVehicles.map((vehicle) => [
     vehicle.model || "N/A",
-    // vehicle.year || "N/A",
-    // vehicle.brand || "N/A",
     vehicle.registration_number || "N/A",
-    <span>
-     {typeof vehicle.customerId === "string" ? vehicle.customerId : vehicle.customerId.name || "N/A"} 
-    </span>,
+    vehicle.customerName || "N/A",
     <span
       className={`text-sm font-medium ${
         vehicle.serviceCount === 10
@@ -399,7 +421,7 @@ const Vehicles = () => {
 
         {/* Edit Vehicle Modal */}
         {isEditModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium flex items-center">
@@ -428,34 +450,6 @@ const Vehicles = () => {
                     required
                   />
                 </div>
-                {/* <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Year
-                  </label>
-                  <input
-                    type="text"
-                    name="year"
-                    value={formData.year}
-                    onChange={handleInputChange}
-                    className="w-full p-2 bg-gray-50 border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter vehicle year"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Brand
-                  </label>
-                  <input
-                    type="text"
-                    name="brand"
-                    value={formData.brand}
-                    onChange={handleInputChange}
-                    className="w-full p-2 bg-gray-50 border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter vehicle brand"
-                    required
-                  />
-                </div> */}
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
                     Registration Number
@@ -538,7 +532,7 @@ const Vehicles = () => {
 
         {/* Add Vehicle Modal */}
         {isAddModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium flex items-center">
@@ -567,34 +561,6 @@ const Vehicles = () => {
                     required
                   />
                 </div>
-                {/* <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Year
-                  </label>
-                  <input
-                    type="text"
-                    name="year"
-                    value={formData.year}
-                    onChange={handleInputChange}
-                    className="w-full p-2 bg-gray-50 border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter vehicle year"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Brand
-                  </label>
-                  <input
-                    type="text"
-                    name="brand"
-                    value={formData.brand}
-                    onChange={handleInputChange}
-                    className="w-full p-2 bg-gray-50 border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter vehicle brand"
-                    required
-                  />
-                </div> */}
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
                     Registration Number
@@ -677,7 +643,7 @@ const Vehicles = () => {
 
         {/* Create Customer Modal */}
         {isCustomerModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium flex items-center">
@@ -711,15 +677,6 @@ const Vehicles = () => {
                   }
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
-                />
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  value={newCustomer.email}
-                  onChange={(e) =>
-                    setNewCustomer({ ...newCustomer, email: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="flex gap-3 mt-6">

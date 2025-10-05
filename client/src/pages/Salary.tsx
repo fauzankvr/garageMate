@@ -219,9 +219,9 @@ const Salaries = () => {
   const data = salaries.map((salary) => [
     salary.employee.name,
     salary.month,
-    `$${salary.baseSalary.toFixed(2)}`,
-    `$${salary.bonus?.toFixed(2) || "0.00"}`,
-    `$${salary.deduction?.toFixed(2) || "0.00"}`,
+    `₹${salary.baseSalary.toFixed(2)}`,
+    `₹${salary.bonus?.toFixed(2) || "0.00"}`,
+    `₹${salary.deduction?.toFixed(2) || "0.00"}`,
     <span
       className={`${
         salary.borrowed && salary.borrowed > 0
@@ -229,9 +229,9 @@ const Salaries = () => {
           : "text-gray-600"
       }`}
     >
-      ${salary.borrowed?.toFixed(2) || "0.00"}
+      ₹{salary.borrowed?.toFixed(2) || "0.00"}
     </span>,
-    `$${salary.paid.toFixed(2)}`,
+    `₹${salary.paid.toFixed(2)}`,
     <span
       className={`rounded-full px-3 py-1 text-xs font-medium ${
         salary.isPaid

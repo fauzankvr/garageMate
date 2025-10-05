@@ -409,6 +409,9 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Sl Num
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Customer
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -420,9 +423,9 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
                 {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Products
                 </th> */}
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Service Charges
-                </th>
+                </th> */}
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total Amount
                 </th>
@@ -443,6 +446,9 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredWorkOrders.map((order) => (
                 <tr key={order._id} className="hover:bg-gray-50">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {order.serialNumber ?? "N/A"}
+                  </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                     {order.customerId.name ?? "N/A"}
                   </td>
@@ -480,7 +486,7 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
                         .join(", ") ?? "N/A"}
                     </div>
                   </td> */}
-                  <td className="px-4 py-4 text-sm text-gray-900">
+                  {/* <td className="px-4 py-4 text-sm text-gray-900">
                     <div
                       className="max-w-xs truncate"
                       title={
@@ -493,7 +499,7 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
                         ?.map((c) => c.description)
                         .join(", ") ?? "N/A"}
                     </div>
-                  </td>
+                  </td> */}
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                     ₹{(order.totalAmount ?? 0).toLocaleString("en-IN")}
                   </td>
