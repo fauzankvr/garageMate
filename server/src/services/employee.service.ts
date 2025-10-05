@@ -11,9 +11,11 @@ class EmployeeService {
 
   async create(data: Employee): Promise<Employee> {
     try {
+      console.log(data)
       const employee = new this.employeeModel(data);
       return await employee.save();
     } catch (error) {
+      console.log(error)
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to create employee: ${errorMessage}`);

@@ -15,8 +15,10 @@ class VehicleService {
 
   async create(data: Vehicle): Promise<Vehicle> {
     try {
-      const vehicle = new this.vehicleModel(data);
-      return await vehicle.save(); 
+     const vehicle = new this.vehicleModel(data);
+     await vehicle.save();
+     return await vehicle.populate("customerId");
+
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
