@@ -205,11 +205,11 @@ class DashboardService {
     // Salaries as expenses, include employee name
     salaries.forEach(s => {
       txs.push({
-        date: new Date(s.createdAt + "-" + s.month + "-01"),
+        date: new Date(s.createdAt + "-" + s.date + "-01"),
         desc: `Salary (${typeof s.employee === "object" && "name" in s.employee ? (s.employee.name as string) : ""})`,
         category: "Salary",
         in: 0,
-        out: s.paid || 0,
+        out: s.due || 0,
       });
     });
 
