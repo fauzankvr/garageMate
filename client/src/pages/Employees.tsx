@@ -10,6 +10,7 @@ interface Employee {
   name: string;
   phone: string;
   // email?: string;
+  baseSalary: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -22,6 +23,7 @@ const Employees = () => {
     name: "",
     phone: "",
     // email: "",
+     baseSalary: ""
   });
 
   // Fetch employees from API
@@ -116,13 +118,13 @@ const Employees = () => {
   };
 
   // Table headers
-  const headers = ["Name", "Phone",  "Status", "Actions"];
+  const headers = ["Name", "Salary", "Phone",  "Status", "Actions"];
 
   // Table data
   const data = employees.map((employee) => [
     employee.name,
+    <span className="text-blue-600">{employee.baseSalary || "N/A"}</span>,
     employee.phone,
-    // <span className="text-blue-600">{employee.email || "N/A"}</span>,
     <span
       className={`rounded-full px-3 py-1 text-xs font-medium ${
         employee.updatedAt
@@ -230,6 +232,25 @@ const Employees = () => {
                   id="phone"
                   name="phone"
                   value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                  placeholder="Enter phone number"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="baseSalary"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Base Salary <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="baseSalary"
+                  name="baseSalary"
+                  value={formData.baseSalary}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                   placeholder="Enter phone number"

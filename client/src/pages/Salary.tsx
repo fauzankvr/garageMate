@@ -9,18 +9,18 @@ interface Employee {
   name: string;
   phone: string;
   email?: string;
+  baseSalary: number;
 }
 
 interface Salary {
   _id: string;
   employee: Employee;
-  month: string;
+  date: string;
   baseSalary: number;
   bonus?: number;
   deduction?: number;
   borrowed?: number;
-  paid: number;
-  isPaid: boolean;
+  due: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -30,14 +30,13 @@ const Salaries = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentSalary, setCurrentSalary] = useState<Salary | null>(null);
   const [formData, setFormData] = useState<Partial<Salary>>({
-    employee: { _id: "", name: "", phone: "" },
-    month: "",
+    employee: { _id: "", name: "", phone: "", baseSalary: 0 },
+    date: "",
     baseSalary: 0,
     bonus: 0,
     deduction: 0,
     borrowed: 0,
-    paid: 0,
-    isPaid: false,
+    due: 0,
   });
   const [employees, setEmployees] = useState<Employee[]>([]);
 
@@ -57,6 +56,45 @@ const Salaries = () => {
     fetchData();
   }, []);
 
+  // Find the most recent salary record for an employee
+  const getPreviousSalary = (employeeId: string): Salary | null => {
+    const employeeSalaries = salaries
+      .filter((sal) => sal.employee._id === employeeId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return employeeSalaries.length > 0 ? employeeSalaries[0] : null;
+  };
+
+  // Calculate due amount
+  const calculateDue = (
+    employeeId: string,
+    baseSalary: number,
+    bonus: number,
+    deduction: number,
+    borrowed: number,
+    newDate: string
+  ): number => {
+    const prevSalary = getPreviousSalary(employeeId);
+    if (!prevSalary) {
+      // First salary: due = baseSalary + bonus - deduction - borrowed
+      return baseSalary + (bonus || 0) - (deduction || 0) - (borrowed || 0);
+    }
+
+    // Get the year and month of the new date and previous salary
+    const newDateObj = new Date(newDate);
+    const prevDateObj = new Date(prevSalary.date);
+    const isSameMonth =
+      newDateObj.getFullYear() === prevDateObj.getFullYear() &&
+      newDateObj.getMonth() === prevDateObj.getMonth();
+
+    if (isSameMonth) {
+      // Same month: due = previous due - borrowed
+      return (prevSalary.due || 0) - (borrowed || 0);
+    } else {
+      // Different month: due = baseSalary + bonus - deduction - borrowed
+      return baseSalary + (bonus || 0) - (deduction || 0) - (borrowed || 0);
+    }
+  };
+
   // Handle form input changes
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -66,12 +104,35 @@ const Salaries = () => {
       const selectedEmployee = employees.find((emp) => emp._id === value);
       setFormData((prev) => ({
         ...prev,
-        employee: selectedEmployee || { _id: "", name: "", phone: "" },
+        employee: selectedEmployee || {
+          _id: "",
+          name: "",
+          phone: "",
+          baseSalary: 0,
+        },
+        baseSalary: selectedEmployee?.baseSalary || 0, // Auto-set baseSalary
+        due: calculateDue(
+          selectedEmployee?._id || "",
+          selectedEmployee?.baseSalary || 0,
+          prev.bonus || 0,
+          prev.deduction || 0,
+          prev.borrowed || 0,
+          prev.date || ""
+        ),
       }));
-    } else if (name === "isPaid") {
-      setFormData((prev) => ({ ...prev, isPaid: value === "true" }));
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        due: calculateDue(
+          prev.employee?._id || "",
+          prev.baseSalary || 0,
+          name === "bonus" ? Number(value) : prev.bonus || 0,
+          name === "deduction" ? Number(value) : prev.deduction || 0,
+          name === "borrowed" ? Number(value) : prev.borrowed || 0,
+          name === "date" ? value : prev.date || ""
+        ),
+      }));
     }
   };
 
@@ -80,27 +141,25 @@ const Salaries = () => {
     try {
       const payload = {
         employee: formData.employee?._id,
-        month: formData.month,
+        date: formData.date,
         baseSalary: Number(formData.baseSalary),
         bonus: Number(formData.bonus) || 0,
         deduction: Number(formData.deduction) || 0,
         borrowed: Number(formData.borrowed) || 0,
-        paid: Number(formData.paid) || 0,
-        isPaid: formData.isPaid || false,
+        due: Number(formData.due) || 0,
       };
       const response = await instance.post("/api/salaries", payload);
       if (response.status === 201) {
         const newSalary = response.data;
         setSalaries((prev) => [...prev, newSalary]);
         setFormData({
-          employee: { _id: "", name: "", phone: "" },
-          month: "",
+          employee: { _id: "", name: "", phone: "", baseSalary: 0 },
+          date: "",
           baseSalary: 0,
           bonus: 0,
           deduction: 0,
           borrowed: 0,
-          paid: 0,
-          isPaid: false,
+          due: 0,
         });
         setIsModalOpen(false);
       } else {
@@ -117,13 +176,12 @@ const Salaries = () => {
     try {
       const payload = {
         employee: formData.employee?._id,
-        month: formData.month,
+        date: formData.date,
         baseSalary: Number(formData.baseSalary),
         bonus: Number(formData.bonus) || 0,
         deduction: Number(formData.deduction) || 0,
         borrowed: Number(formData.borrowed) || 0,
-        paid: Number(formData.paid) || 0,
-        isPaid: formData.isPaid || false,
+        due: Number(formData.due) || 0,
       };
       const response = await instance.put(
         `/api/salaries/${currentSalary._id}`,
@@ -137,14 +195,13 @@ const Salaries = () => {
           )
         );
         setFormData({
-          employee: { _id: "", name: "", phone: "" },
-          month: "",
+          employee: { _id: "", name: "", phone: "", baseSalary: 0 },
+          date: "",
           baseSalary: 0,
           bonus: 0,
           deduction: 0,
           borrowed: 0,
-          paid: 0,
-          isPaid: false,
+          due: 0,
         });
         setCurrentSalary(null);
         setIsModalOpen(false);
@@ -178,25 +235,23 @@ const Salaries = () => {
       setCurrentSalary(salary);
       setFormData({
         employee: salary.employee,
-        month: salary.month,
+        date: salary.date,
         baseSalary: salary.baseSalary,
         bonus: salary.bonus || 0,
         deduction: salary.deduction || 0,
         borrowed: salary.borrowed || 0,
-        paid: salary.paid || 0,
-        isPaid: salary.isPaid,
+        due: salary.due || 0,
       });
     } else {
       setCurrentSalary(null);
       setFormData({
-        employee: { _id: "", name: "", phone: "" },
-        month: "",
+        employee: { _id: "", name: "", phone: "", baseSalary: 0 },
+        date: "",
         baseSalary: 0,
         bonus: 0,
         deduction: 0,
         borrowed: 0,
-        paid: 0,
-        isPaid: false,
+        due: 0,
       });
     }
     setIsModalOpen(true);
@@ -205,20 +260,23 @@ const Salaries = () => {
   // Table headers
   const headers = [
     "Employee",
-    "Month",
+    "Date",
     "Base Salary",
     "Bonus",
     "Deduction",
     "Borrowed",
-    "Paid",
-    "Status",
+    "Due",
     "Actions",
   ];
 
   // Table data
   const data = salaries.map((salary) => [
     salary.employee.name,
-    salary.month,
+    new Date(salary.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }),
     `₹${salary.baseSalary.toFixed(2)}`,
     `₹${salary.bonus?.toFixed(2) || "0.00"}`,
     `₹${salary.deduction?.toFixed(2) || "0.00"}`,
@@ -231,16 +289,7 @@ const Salaries = () => {
     >
       ₹{salary.borrowed?.toFixed(2) || "0.00"}
     </span>,
-    `₹${salary.paid.toFixed(2)}`,
-    <span
-      className={`rounded-full px-3 py-1 text-xs font-medium ${
-        salary.isPaid
-          ? "bg-green-100 text-green-700"
-          : "bg-red-100 text-red-700"
-      }`}
-    >
-      {salary.isPaid ? "Paid" : "Unpaid"}
-    </span>,
+    `₹${salary.due.toFixed(2)}`,
     <div className="flex space-x-2">
       <button
         className="text-blue-500 text-sm hover:underline"
@@ -314,14 +363,13 @@ const Salaries = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Month (YYYY-MM)
+                    Date (YYYY-MM-DD)
                   </label>
                   <input
-                    type="text"
-                    name="month"
-                    value={formData.month}
+                    type="date"
+                    name="date"
+                    value={formData.date}
                     onChange={handleInputChange}
-                    placeholder="e.g., 2025-09"
                     className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
                     required
                   />
@@ -334,9 +382,8 @@ const Salaries = () => {
                     type="number"
                     name="baseSalary"
                     value={formData.baseSalary}
-                    onChange={handleInputChange}
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
-                    required
+                    disabled
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 bg-gray-100 cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -377,30 +424,15 @@ const Salaries = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Paid Amount
+                    Due Amount
                   </label>
                   <input
                     type="number"
-                    name="paid"
-                    value={formData.paid}
-                    onChange={handleInputChange}
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
-                    required
+                    name="due"
+                    value={formData.due}
+                    disabled
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 bg-gray-100 cursor-not-allowed"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    name="isPaid"
-                    value={formData.isPaid ? "true" : "false"}
-                    onChange={handleInputChange}
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
-                  >
-                    <option value="true">Paid</option>
-                    <option value="false">Unpaid</option>
-                  </select>
                 </div>
               </div>
             </div>
