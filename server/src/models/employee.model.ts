@@ -4,6 +4,7 @@ interface Employee extends Document {
   phone: string;
   name: string;
   // email: string;
+  baseSalary: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -13,6 +14,7 @@ const EmployeeSchema = new Schema<Employee>(
     phone: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     // email: { type: String},
+    baseSalary:{type:String}
   },
   { timestamps: true }
 );

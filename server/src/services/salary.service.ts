@@ -68,12 +68,13 @@ export class SalaryService {
       .populate("employee")
       .exec();
   }
-
   async create(
     salaryData: Omit<Salary, "_id" | "createdAt" | "updatedAt">
   ): Promise<Salary> {
     const salary = new SalaryModel(salaryData);
-    return await salary.save();
+    await salary.save(); // First save the document
+    await salary.populate("employee"); // Then populate the reference field
+    return salary;
   }
 
   async update(
