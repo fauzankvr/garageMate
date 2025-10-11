@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Table from "../components/ui/Table"; // Adjust import path
+import Table from "../components/ui/Table";
 import Sidebar from "../components/layout/Sidebar";
 import UserActions from "../components/layout/headers/UserActions";
 import instance from "../axios/axios";
@@ -12,6 +12,11 @@ interface Employee {
   baseSalary: number;
 }
 
+interface BorrowedEntry {
+  date: string;
+  amount: number;
+}
+
 interface Salary {
   _id: string;
   employee: Employee;
@@ -19,24 +24,33 @@ interface Salary {
   baseSalary: number;
   bonus?: number;
   deduction?: number;
-  borrowed?: number;
+  borrowed: number;
+  borrowedHistory: BorrowedEntry[];
   due: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+interface FormData extends Partial<Salary> {
+  newBorrowDate?: string;
+  newBorrowAmount?: number;
 }
 
 const Salaries = () => {
   const [salaries, setSalaries] = useState<Salary[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentSalary, setCurrentSalary] = useState<Salary | null>(null);
-  const [formData, setFormData] = useState<Partial<Salary>>({
+  const [formData, setFormData] = useState<FormData>({
     employee: { _id: "", name: "", phone: "", baseSalary: 0 },
     date: "",
     baseSalary: 0,
     bonus: 0,
     deduction: 0,
     borrowed: 0,
+    borrowedHistory: [],
     due: 0,
+    newBorrowDate: "",
+    newBorrowAmount: 0,
   });
   const [employees, setEmployees] = useState<Employee[]>([]);
 
@@ -46,7 +60,6 @@ const Salaries = () => {
       try {
         const salaryResponse = await instance.get("/api/salaries");
         setSalaries(salaryResponse.data);
-
         const employeeResponse = await instance.get("/api/employee");
         setEmployees(employeeResponse.data);
       } catch (error) {
@@ -75,24 +88,21 @@ const Salaries = () => {
   ): number => {
     const prevSalary = getPreviousSalary(employeeId);
     if (!prevSalary) {
-      // First salary: due = baseSalary + bonus - deduction - borrowed
       return baseSalary + (bonus || 0) - (deduction || 0) - (borrowed || 0);
     }
-
-    // Get the year and month of the new date and previous salary
     const newDateObj = new Date(newDate);
     const prevDateObj = new Date(prevSalary.date);
     const isSameMonth =
       newDateObj.getFullYear() === prevDateObj.getFullYear() &&
       newDateObj.getMonth() === prevDateObj.getMonth();
+    return isSameMonth
+      ? (prevSalary.due || 0) - (borrowed || 0)
+      : baseSalary + (bonus || 0) - (deduction || 0) - (borrowed || 0);
+  };
 
-    if (isSameMonth) {
-      // Same month: due = previous due - borrowed
-      return (prevSalary.due || 0) - (borrowed || 0);
-    } else {
-      // Different month: due = baseSalary + bonus - deduction - borrowed
-      return baseSalary + (bonus || 0) - (deduction || 0) - (borrowed || 0);
-    }
+  // Calculate borrowed from borrowedHistory
+  const calculateBorrowed = (borrowedHistory: BorrowedEntry[]): number => {
+    return borrowedHistory.reduce((sum, entry) => sum + (entry.amount || 0), 0);
   };
 
   // Handle form input changes
@@ -110,30 +120,91 @@ const Salaries = () => {
           phone: "",
           baseSalary: 0,
         },
-        baseSalary: selectedEmployee?.baseSalary || 0, // Auto-set baseSalary
+        baseSalary: selectedEmployee?.baseSalary || 0,
         due: calculateDue(
           selectedEmployee?._id || "",
           selectedEmployee?.baseSalary || 0,
           prev.bonus || 0,
           prev.deduction || 0,
-          prev.borrowed || 0,
+          calculateBorrowed(prev.borrowedHistory || []),
           prev.date || ""
         ),
       }));
     } else {
-      setFormData((prev) => ({
+      setFormData((prev) => {
+        const newFormData = {
+          ...prev,
+          [name]: name === "newBorrowAmount" ? Number(value) : value,
+        };
+        const borrowed = calculateBorrowed(newFormData.borrowedHistory || []);
+        return {
+          ...newFormData,
+          borrowed,
+          due: calculateDue(
+            prev.employee?._id || "",
+            prev.baseSalary || 0,
+            name === "bonus" ? Number(value) : prev.bonus || 0,
+            name === "deduction" ? Number(value) : prev.deduction || 0,
+            borrowed,
+            name === "date" ? value : prev.date || ""
+          ),
+        };
+      });
+    }
+  };
+
+  // Add a new borrow entry
+  const addBorrowEntry = () => {
+    if (!formData.newBorrowDate || !formData.newBorrowAmount) {
+      alert("Please provide both borrow date and amount.");
+      return;
+    }
+    const newEntry: BorrowedEntry = {
+      date: formData.newBorrowDate,
+      amount: formData.newBorrowAmount,
+    };
+    setFormData((prev) => {
+      const newHistory = [...(prev.borrowedHistory || []), newEntry];
+      const borrowed = calculateBorrowed(newHistory);
+      return {
         ...prev,
-        [name]: value,
+        borrowedHistory: newHistory,
+        borrowed,
         due: calculateDue(
           prev.employee?._id || "",
           prev.baseSalary || 0,
-          name === "bonus" ? Number(value) : prev.bonus || 0,
-          name === "deduction" ? Number(value) : prev.deduction || 0,
-          name === "borrowed" ? Number(value) : prev.borrowed || 0,
-          name === "date" ? value : prev.date || ""
+          prev.bonus || 0,
+          prev.deduction || 0,
+          borrowed,
+          prev.date || ""
         ),
-      }));
-    }
+        newBorrowDate: "",
+        newBorrowAmount: 0,
+      };
+    });
+  };
+
+  // Remove a borrow entry
+  const removeBorrowEntry = (index: number) => {
+    setFormData((prev) => {
+      const newHistory = (prev.borrowedHistory || []).filter(
+        (_, i) => i !== index
+      );
+      const borrowed = calculateBorrowed(newHistory);
+      return {
+        ...prev,
+        borrowedHistory: newHistory,
+        borrowed,
+        due: calculateDue(
+          prev.employee?._id || "",
+          prev.baseSalary || 0,
+          prev.bonus || 0,
+          prev.deduction || 0,
+          borrowed,
+          prev.date || ""
+        ),
+      };
+    });
   };
 
   // Handle adding a new salary
@@ -146,6 +217,7 @@ const Salaries = () => {
         bonus: Number(formData.bonus) || 0,
         deduction: Number(formData.deduction) || 0,
         borrowed: Number(formData.borrowed) || 0,
+        borrowedHistory: formData.borrowedHistory || [],
         due: Number(formData.due) || 0,
       };
       const response = await instance.post("/api/salaries", payload);
@@ -159,7 +231,10 @@ const Salaries = () => {
           bonus: 0,
           deduction: 0,
           borrowed: 0,
+          borrowedHistory: [],
           due: 0,
+          newBorrowDate: "",
+          newBorrowAmount: 0,
         });
         setIsModalOpen(false);
       } else {
@@ -181,6 +256,7 @@ const Salaries = () => {
         bonus: Number(formData.bonus) || 0,
         deduction: Number(formData.deduction) || 0,
         borrowed: Number(formData.borrowed) || 0,
+        borrowedHistory: formData.borrowedHistory || [],
         due: Number(formData.due) || 0,
       };
       const response = await instance.put(
@@ -201,7 +277,10 @@ const Salaries = () => {
           bonus: 0,
           deduction: 0,
           borrowed: 0,
+          borrowedHistory: [],
           due: 0,
+          newBorrowDate: "",
+          newBorrowAmount: 0,
         });
         setCurrentSalary(null);
         setIsModalOpen(false);
@@ -211,6 +290,24 @@ const Salaries = () => {
     } catch (error) {
       console.error("Error updating salary:", error);
     }
+  };
+
+  // Handle adding a borrow entry via button
+  const handleAddBorrow = (salary: Salary) => {
+    setCurrentSalary(salary);
+    setFormData({
+      employee: salary.employee,
+      date: salary.date,
+      baseSalary: salary.baseSalary,
+      bonus: salary.bonus || 0,
+      deduction: salary.deduction || 0,
+      borrowed: salary.borrowed || 0,
+      borrowedHistory: salary.borrowedHistory || [],
+      due: salary.due || 0,
+      newBorrowDate: "",
+      newBorrowAmount: 0,
+    });
+    setIsModalOpen(true);
   };
 
   // Handle deleting a salary
@@ -240,7 +337,10 @@ const Salaries = () => {
         bonus: salary.bonus || 0,
         deduction: salary.deduction || 0,
         borrowed: salary.borrowed || 0,
+        borrowedHistory: salary.borrowedHistory || [],
         due: salary.due || 0,
+        newBorrowDate: "",
+        newBorrowAmount: 0,
       });
     } else {
       setCurrentSalary(null);
@@ -251,7 +351,10 @@ const Salaries = () => {
         bonus: 0,
         deduction: 0,
         borrowed: 0,
+        borrowedHistory: [],
         due: 0,
+        newBorrowDate: "",
+        newBorrowAmount: 0,
       });
     }
     setIsModalOpen(true);
@@ -296,6 +399,12 @@ const Salaries = () => {
         onClick={() => openModal(salary)}
       >
         Edit
+      </button>
+      <button
+        className="text-green-500 text-sm hover:underline"
+        onClick={() => handleAddBorrow(salary)}
+      >
+        Add Borrow
       </button>
       <button
         className="text-red-500 text-sm hover:underline"
@@ -350,6 +459,7 @@ const Salaries = () => {
                     onChange={handleInputChange}
                     className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
                     required
+                    disabled={!!currentSalary}
                   >
                     <option value="" disabled>
                       Select an employee
@@ -412,14 +522,71 @@ const Salaries = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Borrowed (optional)
+                    Borrowed History
+                  </label>
+                  <div className="space-y-2 mb-4">
+                    {(formData.borrowedHistory || []).map((entry, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center space-x-2 text-sm border-b pb-2"
+                      >
+                        <span>
+                          {new Date(entry.date).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                        <span>₹{entry.amount.toFixed(2)}</span>
+                        <button
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => removeBorrowEntry(index)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    {(formData.borrowedHistory || []).length === 0 && (
+                      <div className="text-sm text-gray-500">
+                        No borrow entries
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex space-x-2">
+                    <input
+                      type="date"
+                      name="newBorrowDate"
+                      value={formData.newBorrowDate || ""}
+                      onChange={handleInputChange}
+                      className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    />
+                    <input
+                      type="number"
+                      name="newBorrowAmount"
+                      value={formData.newBorrowAmount || ""}
+                      onChange={handleInputChange}
+                      placeholder="Amount"
+                      className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      min="0"
+                    />
+                    <button
+                      className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                      onClick={addBorrowEntry}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Total Borrowed
                   </label>
                   <input
                     type="number"
                     name="borrowed"
                     value={formData.borrowed}
-                    onChange={handleInputChange}
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+                    disabled
+                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 bg-gray-100 cursor-not-allowed"
                   />
                 </div>
                 <div>

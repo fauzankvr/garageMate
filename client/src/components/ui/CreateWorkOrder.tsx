@@ -13,8 +13,6 @@ export interface Customer {
 export interface Vehicle {
   _id: string;
   model: string;
-  // year: string;
-  // brand: string;
   registration_number: string;
   serviceCount: number;
   customerId: string;
@@ -32,7 +30,7 @@ export interface Service {
 
 export interface Product {
   _id: string;
-  productName: string; // Changed from 'name' to match WorkOrderTable
+  productName: string;
   price: number;
   quantity: number;
 }
@@ -43,9 +41,9 @@ export interface ProductItem {
 }
 
 export interface ServiceCharge {
-  description: string;
-  price: number;
-  for: string;
+  description?: string;
+  price?: number;
+  for?: string;
 }
 
 export interface NewCustomer {
@@ -56,8 +54,6 @@ export interface NewCustomer {
 
 export interface NewVehicle {
   model: string;
-  // year: string;
-  // brand: string;
   registration_number: string;
 }
 
@@ -69,17 +65,20 @@ export interface PaymentDetails {
 
 export interface WorkOrder {
   _id?: string;
-  // serialNumber: string;
   customerId: string;
   vehicleId?: string;
-  services: Service[];
-  products: ProductItem[];
-  serviceCharges: ServiceCharge[];
-  totalServiceCharge: number;
-  totalProductCost: number;
-  totalAmount: number;
-  status: "pending" | "paid";
-  paymentDetails: PaymentDetails;
+  services?: Service[];
+  products?: ProductItem[];
+  serviceCharges?: ServiceCharge[];
+  totalServiceCharge?: number;
+  totalProductCost?: number;
+  totalAmount?: number;
+  status?: "pending" | "paid";
+  paymentDetails?: PaymentDetails;
+  notes?: string;
+  discounted?: string;
+  createdAt?: string;
+  orderDate?: string; // New field for user-specified date
 }
 
 interface WorkOrderFormProps {
@@ -103,6 +102,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     cashAmount: 0,
     upiAmount: 0,
   });
+  const [notes, setNotes] = useState<string>("");
+  const [discounted, setDiscounted] = useState<string>("");
+  const [orderDate, setOrderDate] = useState<string>("");
+  const [createdAt, setCreatedAt] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Search and dropdown states
@@ -128,8 +131,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   });
   const [newVehicle, setNewVehicle] = useState<NewVehicle>({
     model: "",
-    // year: "",
-    // brand: "",
     registration_number: "",
   });
 
@@ -156,28 +157,34 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
           }
 
           // Fetch services
-          setSelectedServices(workOrder.services);
+          setSelectedServices(workOrder.services || []);
 
           // Fetch products
           const productResponses = await Promise.all(
-            workOrder.products.map((product) =>
+            (workOrder.products || []).map((product) =>
               instance.get<Product>(`/api/product/${product.productId}`)
             )
           );
           setSelectedProducts(
             productResponses.map((res, index) => ({
               ...res.data,
-              quantity: workOrder.products[index].quantity,
+              quantity: workOrder.products![index].quantity,
             }))
           );
 
           // Set service charges and payment details
-          setServiceCharges(workOrder.serviceCharges ?? []);
+          setServiceCharges(workOrder.serviceCharges || []);
           setPaymentDetails({
-            method: workOrder.paymentDetails.method,
-            cashAmount: workOrder.paymentDetails.cashAmount ?? 0,
-            upiAmount: workOrder.paymentDetails.upiAmount ?? 0,
+            method: workOrder.paymentDetails?.method || "cash",
+            cashAmount: workOrder.paymentDetails?.cashAmount ?? 0,
+            upiAmount: workOrder.paymentDetails?.upiAmount ?? 0,
           });
+
+          // Set notes, discounted, createdAt, and orderDate
+          setNotes(workOrder.notes || "");
+          setDiscounted(workOrder.discounted || "");
+          setCreatedAt(workOrder.createdAt || "");
+          setOrderDate(workOrder.orderDate || "");
         } catch (error: any) {
           console.error("Error loading work order data:", error);
           alert(`Error loading work order data: ${error.message}`);
@@ -278,8 +285,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       setShowVehicleModal(false);
       setNewVehicle({
         model: "",
-        // year: "",
-        // brand: "",
         registration_number: "",
       });
       alert("Vehicle added successfully!");
@@ -289,6 +294,15 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     }
   };
 
+  // Calculate discount amount
+ const calculateDiscountAmount = (): number => {
+   if (!discounted) return 0;
+
+   const fixedAmount = parseFloat(discounted);
+   return isNaN(fixedAmount) ? 0 : fixedAmount;
+ };
+
+
   const createOrUpdateWorkOrder = async (): Promise<void> => {
     if (!selectedCustomer?._id) {
       alert("Please select a customer.");
@@ -297,7 +311,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 
     // Validate serviceCharges
     const validServiceCharges = serviceCharges.filter(
-      (charge) => charge.description && charge.price > 0 && charge.for
+      (charge) => charge.description && charge.price && charge.for
     );
     if (serviceCharges.length > 0 && validServiceCharges.length === 0) {
       alert(
@@ -322,10 +336,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
         _id: `temp-${Date.now()}-${Math.random()}`,
         warranty: "N/A",
         status: true,
-        price: charge.price,
+        price: charge.price || 0,
         count: 1,
-        serviceName: charge.for,
-        description: charge.description,
+        serviceName: charge.for || "",
+        description: charge.description || "",
       })
     );
 
@@ -333,7 +347,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 
     const products: ProductItem[] = selectedProducts.map((product) => ({
       productId: product._id,
-      quantity: product.quantity,
+      quantity: product.quantity || 1,
     }));
 
     const workOrderData: WorkOrder = {
@@ -352,6 +366,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
         cashAmount: paymentDetails.cashAmount ?? 0,
         upiAmount: paymentDetails.upiAmount ?? 0,
       },
+      notes,
+      discounted,
+      createdAt: isEdit ? workOrder?.createdAt : undefined,
+      orderDate,
     };
 
     setIsLoading(true);
@@ -370,7 +388,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       }
       console.log("Work order saved:", response.data);
       alert(`Work Order ${isEdit ? "updated" : "created"} successfully!`);
-      onSave(); // Trigger table refresh
+      onSave();
       resetForm();
     } catch (error: any) {
       console.error("Error saving work order:", error);
@@ -393,6 +411,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     setPhoneSearch("");
     setVehicles([]);
     setPaymentDetails({ method: "cash", cashAmount: 0, upiAmount: 0 });
+    setNotes("");
+    setDiscounted("");
+    setOrderDate("");
+    setCreatedAt("");
     setIsLoading(false);
   };
 
@@ -487,7 +509,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   };
 
   const calculateGrandTotal = (): number => {
-    return calculateServiceTotal() + calculateProductTotal();
+    const subtotal = calculateServiceTotal() + calculateProductTotal();
+    const discountAmount = calculateDiscountAmount();
+    return Math.max(0, subtotal - discountAmount);
   };
 
   return (
@@ -601,7 +625,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                       Model: {selectedVehicle.model}
                     </div>
                     <div>Reg No: {selectedVehicle.registration_number}</div>
-                    {/* <div>Brand: {selectedVehicle.brand}</div> */}
                     <div className="mt-2">
                       <span
                         className={`inline-block text-sm font-medium ${
@@ -737,7 +760,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                 <input
                   type="text"
                   placeholder="Charge Description"
-                  value={charge.description}
+                  value={charge.description || ""}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     updateServiceCharge(index, "description", e.target.value)
                   }
@@ -759,7 +782,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                 <input
                   type="text"
                   placeholder="For"
-                  value={charge.for}
+                  value={charge.for || ""}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     updateServiceCharge(index, "for", e.target.value)
                   }
@@ -901,6 +924,72 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
           </div>
         </div>
 
+        {/* Notes, Discount, and Date Section */}
+        <div className="p-6 bg-gray-100 border-t">
+          <h2 className="text-sm font-medium text-gray-700 mb-4">
+            Additional Details
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Order Date
+              </label>
+              <input
+                type="date"
+                value={orderDate}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setOrderDate(e.target.value)
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Notes
+              </label>
+              <textarea
+                placeholder="Enter any additional notes"
+                value={notes}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setNotes(e.target.value)
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                rows={4}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Discount
+              </label>
+              <input
+                type="text"
+                placeholder="Enter discount (e.g., 10%, 50)"
+                value={discounted}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setDiscounted(e.target.value)
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            {isEdit && createdAt && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Created At
+                </label>
+                <input
+                  type="text"
+                  value={new Date(createdAt).toLocaleString("en-IN", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                  disabled
+                  className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Payment Details Section */}
         <div className="p-6 bg-gray-100 border-t">
           <h2 className="text-sm font-medium text-gray-700 mb-4">
@@ -984,6 +1073,14 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
               <span>Total Product Cost:</span>
               <span>₹{calculateProductTotal().toLocaleString("en-IN")}</span>
             </div>
+            {discounted && (
+              <div className="flex justify-between">
+                <span>Discount:</span>
+                <span>
+                  ₹{calculateDiscountAmount().toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between font-medium text-base border-t pt-2">
               <span>Total Amount:</span>
               <span>₹{calculateGrandTotal().toLocaleString("en-IN")}</span>
@@ -1118,24 +1215,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                 }
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
-              {/* <input
-                type="text"
-                placeholder="Year"
-                value={newVehicle.year}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setNewVehicle({ ...newVehicle, year: e.target.value })
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Brand"
-                value={newVehicle.brand}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setNewVehicle({ ...newVehicle, brand: e.target.value })
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              /> */}
               <input
                 type="text"
                 placeholder="Registration Number"
