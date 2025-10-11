@@ -22,24 +22,22 @@ class WorkOrderController {
           });
         }
       }
+if (Array.isArray(data.products) && data.products.length > 0) {
+  for (const productItem of data.products) {
+    if (productItem?.productId) {
+      const productId = productItem.productId.toString();
+      const product = await productService.findById(productId);
 
-      if (data.products.length) {
-        // Use different variable names to avoid conflicts
-        for (const productItem of data.products) {
-          if (productItem.productId) {
-            const productId = productItem.productId.toString();
-            const product = await productService.findById(productId); // Now this is safe
-            if (!product || !product._id) throw new Error("Product not found");
-            const productDbId = product._id; // Renamed variable
-            if (productDbId) {
-              // Fixed the quantity calculation - subtract the ordered quantity
-              await productService.update(productDbId.toString(), {
-                stock: Number(product.stock) - Number(productItem.quantity),
-              });
-            }
-          }
-        }
-      }
+      if (!product || !product._id) throw new Error("Product not found");
+
+      const productDbId = product._id.toString();
+      const newStock = Number(product.stock) - Number(productItem.quantity);
+
+      await productService.update(productDbId, { stock: newStock });
+    }
+  }
+}
+
 
       const workOrder = await workOrderService.create(data);
       res.status(201).json({
