@@ -1,5 +1,5 @@
 import mongoose, { Types } from "mongoose";
-import { Salary, SalaryModel } from "../models/salary.model";
+import { BorrowedEntry, Salary, SalaryModel } from "../models/salary.model";
 import { Filter } from "./dashboard.service";
 
 export class SalaryService {
@@ -97,6 +97,21 @@ export class SalaryService {
       return null;
     }
     return await SalaryModel.findByIdAndDelete(id).exec();
+  }
+
+  async addBorrowEntry(
+    id: string,
+    borrowEntry: BorrowedEntry
+  ): Promise<Salary | null> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return null;
+    }
+    const salary = await SalaryModel.findById(id).exec();
+    if (!salary) {
+      return null;
+    }
+    salary.borrowedHistory.push(borrowEntry);
+    return await salary.save();
   }
 }
 

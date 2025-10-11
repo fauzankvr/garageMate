@@ -12,5 +12,9 @@ router.get(
 router.post("/", salaryController.create.bind(salaryController));
 router.put("/:id", salaryController.update.bind(salaryController));
 router.delete("/:id", salaryController.delete.bind(salaryController));
+router.post(
+  "/:id/borrow",
+  salaryController.addBorrowEntry.bind(salaryController)
+);
 
 export default router;

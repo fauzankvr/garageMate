@@ -81,6 +81,28 @@ class SalaryController {
       res.status(500).json({ message: "Error deleting salary", error });
     }
   }
+  async addBorrowEntry(req: Request, res: Response): Promise<void> {
+    try {
+      const { date, amount } = req.body;
+      if (!date || !amount || amount < 0) {
+        res.status(400).json({ message: "Invalid borrow entry data" });
+        return;
+      }
+      const salary = await this.salaryService.addBorrowEntry(req.params.id, {
+        date,
+        amount,
+      });
+      if (!salary) {
+        res.status(404).json({ message: "Salary not found" });
+        return;
+      }
+      res.status(200).json(salary);
+    } catch (error: any) {
+      res
+        .status(500)
+        .json({ message: "Error adding borrow entry", error: error.message });
+    }
+  }
 }
 
 export default new SalaryController(salaryServiceInstance);

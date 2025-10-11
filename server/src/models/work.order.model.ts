@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
-// Define referenced interfaces (adjust fields based on your schemas)
+// Define referenced interfaces (unchanged)
 interface Customer {
   _id: Types.ObjectId;
   name: string;
@@ -30,17 +30,17 @@ interface Product {
 }
 
 interface Service {
-  warranty: string;
-  status: boolean;
-  price: number;
-  count: number;
-  serviceName: string;
-  description: string;
+  warranty?: string;
+  status?: boolean;
+  price?: number;
+  count?: number;
+  serviceName?: string;
+  description?: string;
 }
 
 interface ProductItem {
-  productId: Types.ObjectId | Product; // Support populated Product
-  quantity: number;
+  productId: Types.ObjectId | Product;
+  quantity?: number;
 }
 
 interface PaymentDetails {
@@ -50,69 +50,67 @@ interface PaymentDetails {
 }
 
 interface ServiceCharge {
-  description: string;
-  price: number;
-  for: string;
+  description?: string;
+  price?: number;
+  for?: string;
 }
 
 interface WorkOrder extends Document {
-  serialNumber: string;
-  customerId: Types.ObjectId | Customer; // Support populated Customer
-  vehicleId?: Types.ObjectId | Vehicle; // Support populated Vehicle
-  services: Service[];
-  products: ProductItem[];
-  serviceCharges: ServiceCharge[];
-  totalProductCost: number;
-  totalServiceCharge: number;
-  totalAmount: number;
-  status: "pending" | "paid";
-  paymentDetails: PaymentDetails;
+  serialNumber?: string;
+  customerId: Types.ObjectId | Customer; // Kept required for logical consistency
+  vehicleId?: Types.ObjectId | Vehicle;
+  services?: Service[];
+  products?: ProductItem[];
+  serviceCharges?: ServiceCharge[];
+  totalProductCost?: number;
+  totalServiceCharge?: number;
+  totalAmount?: number;
+  status?: "pending" | "paid";
+  paymentDetails?: PaymentDetails;
+  notes?: string;
+  discount?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 const WorkOrderSchema = new Schema<WorkOrder>(
   {
-    serialNumber: { type: String, required: true, unique: true },
+    serialNumber: { type: String, unique: true }, // Removed required, kept unique
     customerId: {
       type: Schema.Types.ObjectId,
       ref: "Customer",
-      required: true,
+      required: true, // Kept required as it's critical for a work order
     },
     vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
     services: [
       {
-        warranty: { type: String, required: true },
-        status: { type: Boolean, required: true, default: true },
-        price: { type: Number, required: true },
-        count: { type: Number, required: true },
-        serviceName: { type: String, required: true },
-        description: { type: String, required: true },
+        warranty: { type: String },
+        status: { type: Boolean, default: true },
+        price: { type: Number },
+        count: { type: Number },
+        serviceName: { type: String },
+        description: { type: String },
       },
     ],
     products: [
       {
-        productId: {
-          type: Schema.Types.ObjectId,
-          ref: "Product",
-          required: true,
-        },
-        quantity: { type: Number, required: true, min: 1 },
+        productId: { type: Schema.Types.ObjectId, ref: "Product" },
+        quantity: { type: Number, min: 1 },
       },
     ],
     serviceCharges: [
       {
-        description: { type: String, required: true },
-        price: { type: Number, required: true },
-        for: { type: String, required: true },
+        description: { type: String },
+        price: { type: Number },
+        for: { type: String },
       },
     ],
-    totalProductCost: { type: Number, required: true },
-    totalServiceCharge: { type: Number, required: true },
-    totalAmount: { type: Number, required: true },
+    totalProductCost: { type: Number },
+    totalServiceCharge: { type: Number },
+    totalAmount: { type: Number },
     status: { type: String, enum: ["pending", "paid"], default: "pending" },
     paymentDetails: {
-      method: { type: String, enum: ["cash", "upi", "both"], required: true },
+      method: { type: String, enum: ["cash", "upi", "both"] },
       cashAmount: {
         type: Number,
         required: function (this: PaymentDetails) {
@@ -126,12 +124,14 @@ const WorkOrderSchema = new Schema<WorkOrder>(
         },
       },
     },
+    notes: { type: String }, // Already present, kept optional
+    discount: { type: String }, // Added discount field, optional
   },
   { timestamps: true }
 );
 
 WorkOrderSchema.pre("validate", function (next) {
-  if (this.paymentDetails.method === "both") {
+  if (this.paymentDetails?.method === "both") {
     const totalPaid =
       (this.paymentDetails.cashAmount || 0) +
       (this.paymentDetails.upiAmount || 0);
