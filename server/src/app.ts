@@ -13,6 +13,7 @@ import salaryRoutes from "./routes/salary.routes";
 import expenseRoutes from "./routes/expense.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import warrantyRoutes from "./routes/warranty.routes";
+import authRoutes from './routes/auth.routes'
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/auth', authRoutes );
 app.use("/api/customer", customerRoutes);
 app.use("/api/service", serviceRoutes);
 app.use("/api/product", productRoutes);

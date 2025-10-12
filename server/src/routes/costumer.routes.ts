@@ -9,5 +9,6 @@ router.get('/:id', costumerController.getById.bind(costumerController));
 router.post('/', costumerController.create.bind(costumerController));
 router.put('/:id', costumerController.update.bind(costumerController));
 router.delete('/:id', costumerController.delete.bind(costumerController));
+router.post("/verify-password",costumerController.verify.bind(costumerController))
 
 export default router;

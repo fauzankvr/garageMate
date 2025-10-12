@@ -28,8 +28,6 @@ class WorkOrderService {
 
   async create(data: any): Promise<WorkOrder> {
     try {
-      console.log("data...", data);
-
       // Remove temporary IDs from services (IDs that start with 'temp-')
       const sanitizedData = {
         ...data,
@@ -53,7 +51,6 @@ class WorkOrderService {
       };
 
       const workOrder = new this.workOrderModel(workOrderData);
-      console.log(workOrder);
 
       const savedWorkOrder = await workOrder.save();
 
