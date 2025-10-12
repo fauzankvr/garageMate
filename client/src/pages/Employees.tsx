@@ -9,7 +9,6 @@ interface Employee {
   _id?: string;
   name: string;
   phone: string;
-  // email?: string;
   baseSalary: string;
   createdAt?: string;
   updatedAt?: string;
@@ -22,9 +21,9 @@ const Employees = () => {
   const [formData, setFormData] = useState<Partial<Employee>>({
     name: "",
     phone: "",
-    // email: "",
-     baseSalary: ""
+    baseSalary: "",
   });
+  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
 
   // Fetch employees from API
   useEffect(() => {
@@ -53,7 +52,7 @@ const Employees = () => {
       if (response.status === 201) {
         const newEmployee = response.data;
         setEmployees((prev) => [...prev, newEmployee]);
-        setFormData({ name: "", phone: "" });
+        setFormData({ name: "", phone: "", baseSalary: "" });
         setIsModalOpen(false);
       } else {
         console.error("Failed to add employee");
@@ -67,7 +66,10 @@ const Employees = () => {
   const handleEditEmployee = async () => {
     if (!currentEmployee?._id) return;
     try {
-      const response = await instance.put(`/api/employee/${currentEmployee._id}`, formData);
+      const response = await instance.put(
+        `/api/employee/${currentEmployee._id}`,
+        formData
+      );
       if (response.status === 200) {
         const updatedEmployee = response.data;
         setEmployees((prev) =>
@@ -75,7 +77,7 @@ const Employees = () => {
             emp._id === updatedEmployee._id ? updatedEmployee : emp
           )
         );
-        setFormData({ name: "", phone: "",  });
+        setFormData({ name: "", phone: "", baseSalary: "" });
         setCurrentEmployee(null);
         setIsModalOpen(false);
       } else {
@@ -88,7 +90,8 @@ const Employees = () => {
 
   // Handle deleting an employee
   const handleDeleteEmployee = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this employee?")) return;
+    if (!window.confirm("Are you sure you want to delete this employee?"))
+      return;
     try {
       const response = await instance.delete(`/api/employee/${id}`);
       if (response.status === 200) {
@@ -108,20 +111,25 @@ const Employees = () => {
       setFormData({
         name: employee.name,
         phone: employee.phone,
-        // email: employee.email || "",
+        baseSalary: employee.baseSalary,
       });
     } else {
       setCurrentEmployee(null);
-      setFormData({ name: "", phone: "" });
+      setFormData({ name: "", phone: "", baseSalary: "" });
     }
     setIsModalOpen(true);
   };
 
   // Table headers
-  const headers = ["Name", "Salary", "Phone",  "Status", "Actions"];
+  const headers = ["Name", "Salary", "Phone", "Status", "Actions"];
+
+  // Filter employees based on search query
+  const filteredEmployees = employees.filter((employee) =>
+    employee.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Table data
-  const data = employees.map((employee) => [
+  const data = filteredEmployees.map((employee) => [
     employee.name,
     <span className="text-blue-600">{employee.baseSalary || "N/A"}</span>,
     employee.phone,
@@ -158,14 +166,27 @@ const Employees = () => {
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
             Employees
           </h1>
-          <div className="flex space-x-2">
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-              onClick={() => openModal()}
-            >
-              Add Employee
-            </button>
-            <UserActions />
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+            <div>
+             
+              <input
+                type="text"
+                id="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Enter employee name..."
+                className="block w-full sm:w-64 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                onClick={() => openModal()}
+              >
+                Add Employee
+              </button>
+              <UserActions />
+            </div>
           </div>
         </div>
         <div className="w-full">
@@ -253,28 +274,11 @@ const Employees = () => {
                   value={formData.baseSalary}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                  placeholder="Enter phone number"
+                  placeholder="Enter base salary"
                   required
                   aria-required="true"
                 />
               </div>
-              {/* <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Email (optional)
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                  placeholder="Enter email address"
-                />
-              </div> */}
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"

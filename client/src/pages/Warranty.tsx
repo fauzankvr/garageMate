@@ -52,6 +52,7 @@ const Warranties = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isEditLoading, setIsEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
 
   useEffect(() => {
     fetchWarranties();
@@ -141,7 +142,12 @@ const Warranties = () => {
     }
   };
 
-  const data = warranties.map(
+  // Filter warranties based on search query
+  const filteredWarranties = warranties.filter((warranty) =>
+    warranty.customerName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const data = filteredWarranties.map(
     (item: Warranty) =>
       [
         item.packageName,
@@ -171,7 +177,7 @@ const Warranties = () => {
             Delete
           </button>
         </div>,
-      ] as (string | number )[]
+      ] as (string | number)[]
   );
 
   return (
@@ -184,15 +190,26 @@ const Warranties = () => {
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
             Warranties
           </h1>
-          <div className="flex space-x-2">
-            <UserActions />
-            <button
-              onClick={openAddModal}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-              aria-label="Add new warranty"
-            >
-              Add New Warranty
-            </button>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+            <InputField
+              
+              name="search"
+              type="text"
+              value={searchQuery}
+              placeholder="Enter customer name..."
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full sm:w-64"
+            />
+            <div className="flex space-x-2">
+              <UserActions />
+              <button
+                onClick={openAddModal}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                aria-label="Add new warranty"
+              >
+                Add New Warranty
+              </button>
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto bg-white shadow rounded-lg">
@@ -238,7 +255,6 @@ const Warranties = () => {
                         setEditError(null);
                       }}
                       className="w-full"
-                    //   disabled={isEditLoading}
                       aria-invalid={!!editError}
                       aria-describedby={
                         editError ? `${field.name}-error` : undefined

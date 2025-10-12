@@ -9,7 +9,7 @@ import { debounce } from "lodash";
 import instance from "../axios/axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Search, X, Eye, Download, Edit, Trash } from "lucide-react";
+import { Search, X, Eye, Download, Edit, Trash, EyeOff } from "lucide-react";
 import logoImage from "../assets/logo.png";
 import WorkOrderForm, {
   type Service,
@@ -72,6 +72,15 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
   >(undefined);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    type: "edit" | "delete";
+    order?: WorkOrderData;
+    id?: string;
+  } | null>(null);
+const [showPassword,setShowPassword] = useState(false)
 
   // Fetch work orders from the API
   const fetchWorkOrders = async () => {
@@ -142,7 +151,6 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
     debounce((term: string, start: string, end: string) => {
       setFilteredWorkOrders(
         workOrders.filter((order) => {
-          // Search filter
           const name = order.customerId.name?.toLowerCase() ?? "";
           const phone = order.customerId.phone
             ? normalizePhone(order.customerId.phone)
@@ -155,7 +163,6 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
             phone.includes(normalizedSearch) ||
             serial.includes(search);
 
-          // Date filter
           let matchesDate = true;
           if (start || end) {
             const orderDate = order.createdAt
@@ -169,13 +176,13 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
                 matchesDate = false;
               }
               if (endDateObj) {
-                endDateObj.setHours(23, 59, 59, 999); // Include entire end date
+                endDateObj.setHours(23, 59, 59, 999);
                 if (orderDate > endDateObj) {
                   matchesDate = false;
                 }
               }
             } else {
-              matchesDate = false; // Exclude orders without createdAt if date filter is applied
+              matchesDate = false;
             }
           }
 
@@ -195,6 +202,59 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
   const clearDateFilter = () => {
     setStartDate("");
     setEndDate("");
+  };
+
+  // Verify password via API
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    try {
+      const res = await instance.post("/api/customer/verify-password", { password });
+      return res.data.success;
+    } catch (err: any) {
+      console.error("Error verifying password:", err);
+      setPasswordError(
+        err.response?.data?.message || "Failed to verify password"
+      );
+      return false;
+    }
+  };
+
+  // Handle password submission
+  const handlePasswordSubmit = async () => {
+    if (!password) {
+      setPasswordError("Please enter a password");
+      return;
+    }
+
+    const isValid = await verifyPassword(password);
+    if (isValid) {
+      setPasswordError(null);
+      setPasswordModalOpen(false);
+      setPassword("");
+
+      if (pendingAction?.type === "edit" && pendingAction.order) {
+        editWorkOrder(pendingAction.order);
+      } else if (pendingAction?.type === "delete" && pendingAction.id) {
+        deleteWorkOrder(pendingAction.id);
+      }
+    } else {
+      setPasswordError("Invalid password");
+    }
+  };
+
+  // Open password modal for edit
+  const promptForEdit = (order: WorkOrderData) => {
+    setPendingAction({ type: "edit", order });
+    setPasswordModalOpen(true);
+    setPassword("");
+    setPasswordError(null);
+  };
+
+  // Open password modal for delete
+  const promptForDelete = (id: string) => {
+    setPendingAction({ type: "delete", id });
+    setPasswordModalOpen(true);
+    setPassword("");
+    setPasswordError(null);
   };
 
   // Update work order status
@@ -452,6 +512,14 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
     fetchWorkOrders();
   };
 
+  // Close password modal
+  const closePasswordModal = () => {
+    setPasswordModalOpen(false);
+    setPassword("");
+    setPasswordError(null);
+    setPendingAction(null);
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-4">
@@ -517,6 +585,9 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
                     Total Amount
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Discount
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -545,6 +616,9 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       ₹{(order.totalAmount ?? 0).toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₹{order.discount ?? 0}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <select
@@ -576,14 +650,14 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
                       <div className="flex gap-2">
                         <button
-                          onClick={() => editWorkOrder(order)}
+                          onClick={() => promptForEdit(order)}
                           className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                           title="Edit Work Order"
                         >
                           <Edit size={16} />
                         </button>
                         <button
-                          onClick={() => deleteWorkOrder(order._id)}
+                          onClick={() => promptForDelete(order._id)}
                           className="flex items-center gap-1 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
                           title="Delete Work Order"
                         >
@@ -673,6 +747,56 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
                 workOrder={selectedWorkOrder}
                 onSave={closeEditModal}
               />
+            </div>
+          </div>
+        )}
+
+        {passwordModalOpen && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">Enter Password</h3>
+                <button
+                  onClick={closePasswordModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="mb-4 relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+                {passwordError && (
+                  <p className="text-red-500 text-sm mt-2">{passwordError}</p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={closePasswordModal}
+                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePasswordSubmit}
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Submit
+                </button>
+              </div>
             </div>
           </div>
         )}

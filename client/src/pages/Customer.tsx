@@ -8,7 +8,6 @@ interface Customer {
   _id?: string;
   name: string;
   phone: string;
-  // vehicles: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -20,8 +19,8 @@ const Customers = () => {
   const [formData, setFormData] = useState<Partial<Customer>>({
     name: "",
     phone: "",
-    // vehicles: [],
   });
+  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
 
   // Fetch customers from API
   useEffect(() => {
@@ -64,7 +63,10 @@ const Customers = () => {
   const handleEditCustomer = async () => {
     if (!currentCustomer?._id) return;
     try {
-      const response = await instance.put(`/api/customer/${currentCustomer._id}`, formData);
+      const response = await instance.put(
+        `/api/customer/${currentCustomer._id}`,
+        formData
+      );
       if (response.status === 200) {
         const updatedCustomer = response.data;
         setCustomers((prev) =>
@@ -85,7 +87,8 @@ const Customers = () => {
 
   // Handle deleting a customer
   const handleDeleteCustomer = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this customer?")) return;
+    if (!window.confirm("Are you sure you want to delete this customer?"))
+      return;
     try {
       const response = await instance.delete(`/api/customer/${id}`);
       if (response.status === 200) {
@@ -105,25 +108,26 @@ const Customers = () => {
       setFormData({
         name: customer.name,
         phone: customer.phone,
-        // email: customer.email,
-        // vehicles: customer.vehicles || [],
       });
     } else {
       setCurrentCustomer(null);
-      setFormData({ name: "", phone: ""});
+      setFormData({ name: "", phone: "" });
     }
     setIsModalOpen(true);
   };
 
   // Table headers
-  const headers = ["Name", "Phone",  "Status", "Actions"];
+  const headers = ["Name", "Phone", "Status", "Actions"];
+
+  // Filter customers based on search query
+  const filteredCustomers = customers.filter((customer) =>
+    customer.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Table data
-  const data = customers.map((customer) => [
+  const data = filteredCustomers.map((customer) => [
     customer.name,
     customer.phone,
-    // <span className="text-blue-600">{customer.email}</span>,
-    // <span>{customer.vehicles.length > 0 ? customer.vehicles.join(", ") : "No vehicles"}</span>,
     <span
       className={`rounded-full px-3 py-1 text-xs font-medium ${
         customer.updatedAt
@@ -157,14 +161,29 @@ const Customers = () => {
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
             Customers
           </h1>
-          <div className="flex space-x-2">
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-              onClick={() => openModal()}
-            >
-              Add Customer
-            </button>
-            <UserActions />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+            {/* Search Input */}
+            <div className="w-full sm:w-auto">
+              <input
+                type="text"
+                id="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Enter customer name..."
+                className="block w-full sm:w-64 rounded-lg border border-gray-300 p-2 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 outline-none transition-all"
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center gap-4">
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
+                onClick={() => openModal()}
+              >
+                Add Customer
+              </button>
+              <UserActions />
+            </div>
           </div>
         </div>
         <div className="w-full">
@@ -206,21 +225,6 @@ const Customers = () => {
                   required
                 />
               </div>
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                  required
-                />
-              </div> */}
-              {/* Note: Vehicles field is not included in the form as it references ObjectIds. 
-                 You may want to add a separate mechanism to manage vehicles if needed. */}
             </div>
             <div className="mt-6 flex justify-end space-x-2">
               <button
@@ -231,7 +235,9 @@ const Customers = () => {
               </button>
               <button
                 className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                onClick={currentCustomer ? handleEditCustomer : handleAddCustomer}
+                onClick={
+                  currentCustomer ? handleEditCustomer : handleAddCustomer
+                }
               >
                 {currentCustomer ? "Update" : "Add"}
               </button>

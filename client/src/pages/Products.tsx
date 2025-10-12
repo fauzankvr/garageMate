@@ -50,6 +50,7 @@ const Products = () => {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
 
   useEffect(() => {
     fetchProducts();
@@ -72,13 +73,18 @@ const Products = () => {
     setIsAddModalOpen(false);
   };
 
-  const data = products.map(
+  // Filter products based on search query
+  const filteredProducts = products.filter((product) =>
+    product.productName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const data = filteredProducts.map(
     (item: Product) =>
       [
         item.productName,
         item.description,
         item.price.toString(),
-        item.stock != null ? item.stock.toString() : "0", // Fallback for undefined stock
+        item.stock != null ? item.stock.toString() : "0",
         item.brand,
         <div className="space-x-2" key={`${item._id}-actions`}>
           <button
@@ -95,7 +101,7 @@ const Products = () => {
             Delete
           </button>
         </div>,
-      ] as (string | number )[]
+      ] as (string | number)[]
   );
 
   return (
@@ -108,14 +114,24 @@ const Products = () => {
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
             Products
           </h1>
-          <div className="flex space-x-2">
-            <UserActions />
-            <button
-              onClick={openAddModal}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-            >
-              Add New Product
-            </button>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+            <InputField
+              name="search"
+              type="text"
+              value={searchQuery}
+              placeholder="Enter product name..."
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full sm:w-64"
+            />
+            <div className="flex space-x-2">
+              <UserActions />
+              <button
+                onClick={openAddModal}
+                className="bg-blue-500 text-white px-4 py-1 rounded-lg hover:bg-blue-600"
+              >
+                Add New Product
+              </button>
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto bg-white shadow rounded-lg">

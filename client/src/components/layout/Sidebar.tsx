@@ -1,4 +1,9 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import {
+  NavLink,
+  useNavigate,
+  type NavLinkRenderProps,
+} from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   Home,
   Users,
@@ -7,10 +12,11 @@ import {
   Users2,
   ShieldCheck,
   UserSquare2,
+  ArrowLeft,
+  RefreshCw,
 } from "lucide-react";
 import { AiFillDollarCircle, AiFillProduct } from "react-icons/ai";
 import { FaMoneyBillWave } from "react-icons/fa";
-import { ArrowLeft, RefreshCw } from "lucide-react"; // Added icons for back and reload
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -68,6 +74,12 @@ const Sidebar = () => {
     },
   ];
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    toast.success("Logged out successfully");
+    navigate("/login");
+  };
+
   return (
     <div className="sticky top-0 h-screen w-56 bg-gray-50 border-r border-gray-200 p-4 flex flex-col sidebar">
       {/* Reload and Back Buttons */}
@@ -97,13 +109,13 @@ const Sidebar = () => {
       </h1>
 
       {/* Navigation Links */}
-      <nav className="flex flex-col space-y-2">
+      <nav className="flex flex-col space-y-2 flex-grow">
         {menuItems.map((item, index) => (
           <NavLink
             key={index}
             to={item.path}
-            end={item.path === "/dashboard"} // only true for dashboard
-            className={({ isActive }) =>
+            end={item.path === "/dashboard"}
+            className={({ isActive }: NavLinkRenderProps) =>
               `flex items-center space-x-3 px-4 py-2 rounded-lg text-sm font-medium transition ${
                 isActive
                   ? "bg-gray-200 text-black shadow-sm"
@@ -116,6 +128,14 @@ const Sidebar = () => {
           </NavLink>
         ))}
       </nav>
+
+      {/* Logout Button */}
+      <button
+        onClick={handleLogout}
+        className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+      >
+        Logout
+      </button>
     </div>
   );
 };

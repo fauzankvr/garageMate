@@ -53,6 +53,7 @@ const Salaries = () => {
     newBorrowAmount: 0,
   });
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
 
   // Fetch salaries and employees from API
   useEffect(() => {
@@ -372,8 +373,13 @@ const Salaries = () => {
     "Actions",
   ];
 
+  // Filter salaries based on search query
+  const filteredSalaries = salaries.filter((salary) =>
+    salary.employee.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Table data
-  const data = salaries.map((salary) => [
+  const data = filteredSalaries.map((salary) => [
     salary.employee.name,
     new Date(salary.date).toLocaleDateString("en-US", {
       year: "numeric",
@@ -423,14 +429,25 @@ const Salaries = () => {
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800">
             Salary Management
           </h1>
-          <div className="flex space-x-2">
-            <button
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              onClick={() => openModal()}
-            >
-              Add Salary
-            </button>
-            <UserActions />
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+            <div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Enter employee name..."
+                className="block w-full sm:w-64 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                onClick={() => openModal()}
+              >
+                Add Salary
+              </button>
+              <UserActions />
+            </div>
           </div>
         </div>
         <div className="w-full">
