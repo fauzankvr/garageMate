@@ -6,8 +6,8 @@ import instance from "../../axios/axios";
 export interface Customer {
   _id: string;
   phone: string;
-  name: string;
-  email: string;
+  name?: string; // Made name optional
+  email?: string;
 }
 
 export interface Vehicle {
@@ -47,9 +47,9 @@ export interface ServiceCharge {
 }
 
 export interface NewCustomer {
-  name: string;
+  name?: string; // Made name optional
   phone: string;
-  email: string;
+  email?: string;
 }
 
 export interface NewVehicle {
@@ -76,9 +76,9 @@ export interface WorkOrder {
   status?: "pending" | "paid";
   paymentDetails?: PaymentDetails;
   notes?: string;
-  discounted?: string;
+  discount?: string;
   createdAt?: string;
-  orderDate?: string; // New field for user-specified date
+  updatedAt?: string;
 }
 
 interface WorkOrderFormProps {
@@ -103,9 +103,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     upiAmount: 0,
   });
   const [notes, setNotes] = useState<string>("");
-  const [discounted, setDiscounted] = useState<string>("");
-  const [orderDate, setOrderDate] = useState<string>("");
-  const [createdAt, setCreatedAt] = useState<string>("");
+  const [discount, setDiscount] = useState<string>("")
+  const [createdAt, setCreatedAt] = useState<string>(
+    new Date().toISOString().split("T")[0] // Initialize with today's date
+  );
+  const [updatedAt, setUpdatedAt] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Search and dropdown states
@@ -180,11 +182,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             upiAmount: workOrder.paymentDetails?.upiAmount ?? 0,
           });
 
-          // Set notes, discounted, createdAt, and orderDate
+          // Set notes, discounted, createdAt, and updatedAt
           setNotes(workOrder.notes || "");
-          setDiscounted(workOrder.discounted || "");
-          setCreatedAt(workOrder.createdAt || "");
-          setOrderDate(workOrder.orderDate || "");
+          setDiscount(workOrder.discount || "");
+          setCreatedAt(workOrder.createdAt?.split("T")[0] || "");
+          setUpdatedAt(workOrder.updatedAt || "");
         } catch (error: any) {
           console.error("Error loading work order data:", error);
           alert(`Error loading work order data: ${error.message}`);
@@ -254,6 +256,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   };
 
   const createCustomer = async (): Promise<void> => {
+    if (!newCustomer.phone) {
+      alert("Phone number is required.");
+      return;
+    }
     try {
       const response = await instance.post<Customer>(
         "/api/customer",
@@ -295,13 +301,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   };
 
   // Calculate discount amount
- const calculateDiscountAmount = (): number => {
-   if (!discounted) return 0;
-
-   const fixedAmount = parseFloat(discounted);
-   return isNaN(fixedAmount) ? 0 : fixedAmount;
- };
-
+  const calculateDiscountAmount = (): number => {
+    if (!discount) return 0;
+    const fixedAmount = parseFloat(discount);
+    return isNaN(fixedAmount) ? 0 : fixedAmount;
+  };
 
   const createOrUpdateWorkOrder = async (): Promise<void> => {
     if (!selectedCustomer?._id) {
@@ -367,9 +371,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
         upiAmount: paymentDetails.upiAmount ?? 0,
       },
       notes,
-      discounted,
-      createdAt: isEdit ? workOrder?.createdAt : undefined,
-      orderDate,
+      discount,
+      createdAt,
+      updatedAt: isEdit ? new Date().toISOString() : undefined,
     };
 
     setIsLoading(true);
@@ -412,9 +416,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     setVehicles([]);
     setPaymentDetails({ method: "cash", cashAmount: 0, upiAmount: 0 });
     setNotes("");
-    setDiscounted("");
-    setOrderDate("");
-    setCreatedAt("");
+    setDiscount("");
+    setCreatedAt(new Date().toISOString().split("T")[0]);
+    setUpdatedAt("");
     setIsLoading(false);
   };
 
@@ -544,7 +548,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                   </button>
                   <div className="text-sm">
                     <div className="font-medium">
-                      Name: {selectedCustomer.name}
+                      Name: {selectedCustomer.name || "N/A"}
                     </div>
                     <div>Phone: {selectedCustomer.phone}</div>
                   </div>
@@ -590,7 +594,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                           onClick={() => handleCustomerSelect(customer)}
                           className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
                         >
-                          <div className="font-medium">{customer.name}</div>
+                          <div className="font-medium">
+                            {customer.name || "N/A"}
+                          </div>
                           <div className="text-sm text-gray-600">
                             {customer.phone}
                           </div>
@@ -932,17 +938,33 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Order Date
+                Bill Date
               </label>
               <input
                 type="date"
-                value={orderDate}
+                value={createdAt}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setOrderDate(e.target.value)
+                  setCreatedAt(e.target.value)
                 }
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            {isEdit && updatedAt && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Last Updated
+                </label>
+                <input
+                  type="text"
+                  value={new Date(updatedAt).toLocaleString("en-IN", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                  disabled
+                  className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500"
+                />
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
                 Notes
@@ -964,29 +986,13 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
               <input
                 type="text"
                 placeholder="Enter discount (e.g., 10%, 50)"
-                value={discounted}
+                value={discount}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setDiscounted(e.target.value)
+                  setDiscount(e.target.value)
                 }
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            {isEdit && createdAt && (
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Created At
-                </label>
-                <input
-                  type="text"
-                  value={new Date(createdAt).toLocaleString("en-IN", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                  disabled
-                  className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500"
-                />
-              </div>
-            )}
           </div>
         </div>
 
@@ -1073,7 +1079,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
               <span>Total Product Cost:</span>
               <span>₹{calculateProductTotal().toLocaleString("en-IN")}</span>
             </div>
-            {discounted && (
+            {discount && (
               <div className="flex justify-between">
                 <span>Discount:</span>
                 <span>
@@ -1126,8 +1132,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             {isLoading
               ? "Processing..."
               : isEdit
-              ? "Update Work Order"
-              : "Create Work Order"}
+              ? "Update Old Bill"
+              : "Create New Bill"}
           </button>
         </div>
       </div>
@@ -1152,8 +1158,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             <div className="space-y-4">
               <input
                 type="text"
-                placeholder="Customer Name"
-                value={newCustomer.name}
+                placeholder="Customer Name (Optional)"
+                value={newCustomer.name || ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setNewCustomer({ ...newCustomer, name: e.target.value })
                 }
@@ -1167,6 +1173,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                   setNewCustomer({ ...newCustomer, phone: e.target.value })
                 }
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
               />
             </div>
 

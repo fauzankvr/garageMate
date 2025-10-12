@@ -59,7 +59,7 @@ const WorkOrders = () => {
           <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium">Create Work Order</h3>
+                <h3 className="text-lg font-medium"></h3>
                 <button
                   onClick={handleCloseModal}
                   className="text-gray-400 hover:text-gray-600"

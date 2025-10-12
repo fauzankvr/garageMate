@@ -44,6 +44,8 @@ interface WorkOrderData {
   totalAmount: number;
   status: "pending" | "paid";
   paymentDetails: PaymentDetails;
+  notes?: string;
+  discount?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -58,6 +60,8 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
     []
   );
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const [previewModalOpen, setPreviewModalOpen] = useState<boolean>(false);
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string>("");
   const [currentWorkOrder, setCurrentWorkOrder] =
@@ -66,8 +70,13 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<
     WorkOrder | undefined
   >(undefined);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch work orders from the API
   const fetchWorkOrders = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       const res = await instance.get<{
         success: boolean;
@@ -77,8 +86,12 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
 
       const workOrdersData = res.data.data.map((order) => ({
         _id: order._id,
-        serialNumber:order.serialNumber,
-        customerId: order.customerId,
+        serialNumber: order.serialNumber ?? "N/A",
+        customerId: order.customerId ?? {
+          name: "N/A",
+          email: "N/A",
+          phone: "N/A",
+        },
         vehicleId: order.vehicleId,
         services: order.services || [],
         products: order.products || [],
@@ -88,6 +101,8 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
         totalAmount: order.totalAmount || 0,
         status: order.status || "pending",
         paymentDetails: order.paymentDetails || { method: "cash" },
+        notes: order.notes || "",
+        discount: order.discount || "",
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
       }));
@@ -97,47 +112,92 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
       onRefresh?.();
     } catch (err: any) {
       console.error("Error fetching work orders:", err);
-      alert(
+      setError(
         `Failed to fetch work orders: ${
           err.response?.data?.message || err.message
         }`
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Initial fetch of work orders
   useEffect(() => {
     fetchWorkOrders();
-  }, []);
+  }, [onRefresh]);
 
+  // Expose refresh method to parent via ref
   useImperativeHandle(ref, () => ({
     refresh: fetchWorkOrders,
   }));
 
+  // Normalize phone number for search
   const normalizePhone = (phone: string) => {
     return phone.replace(/[\s-+]/g, "");
   };
 
+  // Debounced search function for filtering work orders
   const debouncedSearch = useCallback(
-    debounce((term: string) => {
+    debounce((term: string, start: string, end: string) => {
       setFilteredWorkOrders(
         workOrders.filter((order) => {
+          // Search filter
           const name = order.customerId.name?.toLowerCase() ?? "";
           const phone = order.customerId.phone
             ? normalizePhone(order.customerId.phone)
             : "";
+          const serial = order.serialNumber?.toLowerCase() ?? "";
           const search = term.toLowerCase();
           const normalizedSearch = normalizePhone(term);
-          return name.includes(search) || phone.includes(normalizedSearch);
+          const matchesSearch =
+            name.includes(search) ||
+            phone.includes(normalizedSearch) ||
+            serial.includes(search);
+
+          // Date filter
+          let matchesDate = true;
+          if (start || end) {
+            const orderDate = order.createdAt
+              ? new Date(order.createdAt)
+              : null;
+            const startDateObj = start ? new Date(start) : null;
+            const endDateObj = end ? new Date(end) : null;
+
+            if (orderDate) {
+              if (startDateObj && orderDate < startDateObj) {
+                matchesDate = false;
+              }
+              if (endDateObj) {
+                endDateObj.setHours(23, 59, 59, 999); // Include entire end date
+                if (orderDate > endDateObj) {
+                  matchesDate = false;
+                }
+              }
+            } else {
+              matchesDate = false; // Exclude orders without createdAt if date filter is applied
+            }
+          }
+
+          return matchesSearch && matchesDate;
         })
       );
     }, 300),
     [workOrders]
   );
 
+  // Trigger search when search term or date range changes
   useEffect(() => {
-    debouncedSearch(searchTerm);
-  }, [searchTerm, debouncedSearch]);
+    debouncedSearch(searchTerm, startDate, endDate);
+  }, [searchTerm, startDate, endDate, debouncedSearch]);
 
+  // Clear date filters
+  const clearDateFilter = () => {
+    setStartDate("");
+    setEndDate("");
+  };
+
+  // Update work order status
   const updateStatus = async (id: string, newStatus: "pending" | "paid") => {
     try {
       await instance.put(`/api/workorder/${id}`, { status: newStatus });
@@ -160,6 +220,7 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
     }
   };
 
+  // Delete work order
   const deleteWorkOrder = async (id: string) => {
     if (!confirm("Are you sure you want to delete this work order?")) return;
     try {
@@ -177,27 +238,33 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
     }
   };
 
+  // Prepare work order for editing
   const editWorkOrder = (order: WorkOrderData) => {
     setSelectedWorkOrder({
       _id: order._id,
-      // serialNumber:order.serialNumber,
-      customerId: order.customerId._id,
+      customerId: order.customerId?._id ?? "",
       vehicleId: order.vehicleId?._id,
-      services: order.services,
-      products: order.products.map((p) => ({
-        productId: p.productId._id,
-        quantity: p.quantity,
-      })),
-      serviceCharges: order.serviceCharges,
-      totalServiceCharge: order.totalServiceCharge,
-      totalProductCost: order.totalProductCost,
-      totalAmount: order.totalAmount,
-      status: order.status,
-      paymentDetails: order.paymentDetails,
+      services: order.services ?? [],
+      products:
+        order.products?.map((p) => ({
+          productId: p.productId?._id ?? "",
+          quantity: p.quantity ?? 0,
+        })) ?? [],
+      serviceCharges: order.serviceCharges ?? [],
+      totalServiceCharge: order.totalServiceCharge ?? 0,
+      totalProductCost: order.totalProductCost ?? 0,
+      totalAmount: order.totalAmount ?? 0,
+      status: order.status ?? "pending",
+      paymentDetails: order.paymentDetails ?? { method: "cash" },
+      notes: order.notes ?? "",
+      discount: order.discount ?? "",
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
     });
     setEditModalOpen(true);
   };
 
+  // Generate PDF invoice
   const generateInvoice = (
     workOrder: WorkOrderData,
     preview: boolean = false
@@ -227,48 +294,35 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    // const invoiceNumber = `INV-${Math.random()
-    //   .toString(36)
-    //   .substr(2, 6)
-    //   .toUpperCase()}`;
-    doc.text(`Invoice Number: ${workOrder.serialNumber}`, 180, 30, { align: "right" });
-    doc.text(
-      `Date of Issue: ${new Date().toLocaleDateString("en-IN")}`,
-      180,
-      35,
-      {
-        align: "right",
-      }
-    );
-    doc.text(`Due Date: ${new Date().toLocaleDateString("en-IN")}`, 180, 40, {
+    doc.text(`Invoice Number: ${workOrder.serialNumber ?? "N/A"}`, 180, 30, {
       align: "right",
     });
+    doc.text(
+      `Date of Issue: ${
+        workOrder.createdAt
+          ? new Date(workOrder.createdAt).toLocaleDateString("en-IN")
+          : new Date().toLocaleDateString("en-IN")
+      }`,
+      180,
+      35,
+      { align: "right" }
+    );
 
-    // Add Created At and Payment Method to invoice
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(
-      `Payment Method: ${workOrder.paymentDetails.method ?? "N/A"}`,
+      `Payment Method: ${workOrder.paymentDetails?.method ?? "N/A"}`,
       14,
       105
-    );
-    doc.text(
-      `Created At: ${
-        workOrder.createdAt
-          ? new Date(workOrder.createdAt).toLocaleDateString("en-IN")
-          : "N/A"
-      }`,
-      14,
-      110
     );
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.text("Bill To:", 14, 80);
     doc.setFont("helvetica", "normal");
-    doc.text(workOrder.customerId.name ?? "N/A", 14, 85);
-    doc.text(workOrder.customerId.email ?? "N/A", 14, 90);
-    doc.text(workOrder.customerId.phone ?? "N/A", 14, 95);
+    doc.text(workOrder.customerId?.name ?? "N/A", 14, 85);
+    doc.text(workOrder.customerId?.email ?? "N/A", 14, 90);
+    doc.text(workOrder.customerId?.phone ?? "N/A", 14, 95);
     doc.text(
       `Vehicle: ${workOrder.vehicleId?.model ?? "N/A"} (${
         workOrder.vehicleId?.registration_number ?? "N/A"
@@ -284,14 +338,16 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
         `${(s.price ?? 0).toLocaleString("en-IN")}`,
         `${(s.price ?? 0).toLocaleString("en-IN")}`,
       ]),
-      ...workOrder.products.map((p) => [
-        p.productId.productName ?? "Unknown Product",
-        p.quantity.toString(),
-        `${(p.productId.price ?? 0).toLocaleString("en-IN")}`,
-        `${((p.productId.price ?? 0) * p.quantity).toLocaleString("en-IN")}`,
+      ...(workOrder.products ?? []).map((p) => [
+        p.productId?.productName ?? "Unknown Product",
+        p.quantity?.toString() ?? "0",
+        `${(p.productId?.price ?? 0).toLocaleString("en-IN")}`,
+        `${((p.productId?.price ?? 0) * (p.quantity ?? 0)).toLocaleString(
+          "en-IN"
+        )}`,
       ]),
       ...(workOrder.serviceCharges ?? []).map((c) => [
-        `${c.description} (${c.for})`,
+        `${c.description ?? "N/A"} (${c.for ?? "N/A"})`,
         "1",
         `${(c.price ?? 0).toLocaleString("en-IN")}`,
         `${(c.price ?? 0).toLocaleString("en-IN")}`,
@@ -343,12 +399,20 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
       { align: "left" }
     );
 
+    if (workOrder.discount) {
+      const discountAmount = parseFloat(workOrder.discount) || 0;
+      doc.text("Discount:", 120, finalY + 14);
+      doc.text(`${discountAmount.toLocaleString("en-IN")}`, 190, finalY + 14, {
+        align: "left",
+      });
+    }
+
     doc.setFont("helvetica", "bold");
-    doc.text("Total Amount:", 120, finalY + 14);
+    doc.text("Total Amount:", 120, finalY + (workOrder.discount ? 21 : 14));
     doc.text(
       `${(workOrder.totalAmount ?? 0).toLocaleString("en-IN")}`,
       190,
-      finalY + 14,
+      finalY + (workOrder.discount ? 21 : 14),
       { align: "left" }
     );
 
@@ -356,9 +420,11 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
     doc.setFont("helvetica", "normal");
     doc.text("Notes:", 14, finalY + 35);
     doc.text(
-      "Thank you for choosing OZON Detailing & Car Wash. Please settle the invoice within 7 days.",
+      workOrder.notes ||
+        "Thank you for choosing OZON Detailing & Car Wash. Please settle the invoice within 7 days.",
       14,
-      finalY + 40
+      finalY + 40,
+      { maxWidth: 180 }
     );
 
     if (preview) {
@@ -368,271 +434,249 @@ const WorkOrderTable = forwardRef(({ onRefresh }: WorkOrderTableProps, ref) => {
       setCurrentWorkOrder(workOrder);
       setPreviewModalOpen(true);
     } else {
-      doc.save(`Invoice_${workOrder.customerId.name ?? "WorkOrder"}.pdf`);
+      doc.save(`Invoice_${workOrder.customerId?.name ?? "WorkOrder"}.pdf`);
     }
   };
 
+  // Close preview modal
   const closePreviewModal = () => {
     setPreviewPdfUrl("");
     setCurrentWorkOrder(null);
     setPreviewModalOpen(false);
   };
 
+  // Close edit modal and refresh data
   const closeEditModal = () => {
     setEditModalOpen(false);
     setSelectedWorkOrder(undefined);
-    fetchWorkOrders(); // Refresh after edit
+    fetchWorkOrders();
   };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Work Orders</h2>
       <div className="mb-4">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search by customer name or phone"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 pl-10"
-          />
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-        </div>
-      </div>
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
-        {filteredWorkOrders.length === 0 && searchTerm ? (
-          <div className="p-4 text-center text-gray-500">
-            No work orders found for "{searchTerm}".
-          </div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sl Num
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Vehicle
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Services
-                </th>
-                {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Products
-                </th> */}
-                {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Service Charges
-                </th> */}
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Amount
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created At
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payment Method
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredWorkOrders.map((order) => (
-                <tr key={order._id} className="hover:bg-gray-50">
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.serialNumber ?? "N/A"}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.customerId.name ?? "N/A"}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.vehicleId?.model ?? "N/A"} (
-                    {order.vehicleId?.registration_number ?? "N/A"})
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900">
-                    <div
-                      className="max-w-xs truncate"
-                      title={
-                        order.services?.map((s) => s.serviceName).join(", ") ??
-                        "N/A"
-                      }
-                    >
-                      {order.services?.map((s) => s.serviceName).join(", ") ??
-                        "N/A"}
-                    </div>
-                  </td>
-                  {/* <td className="px-4 py-4 text-sm text-gray-900">
-                    <div
-                      className="max-w-xs truncate"
-                      title={
-                        order.products
-                          ?.map(
-                            (p) => p.productId?.productName || "Unknown Product"
-                          )
-                          .join(", ") ?? "N/A"
-                      }
-                    >
-                      {order.products
-                        ?.map(
-                          (p) => p.productId?.productName || "Unknown Product"
-                        )
-                        .join(", ") ?? "N/A"}
-                    </div>
-                  </td> */}
-                  {/* <td className="px-4 py-4 text-sm text-gray-900">
-                    <div
-                      className="max-w-xs truncate"
-                      title={
-                        order.serviceCharges
-                          ?.map((c) => `${c.description} (₹${c.price})`)
-                          .join(", ") ?? "N/A"
-                      }
-                    >
-                      {order.serviceCharges
-                        ?.map((c) => c.description)
-                        .join(", ") ?? "N/A"}
-                    </div>
-                  </td> */}
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ₹{(order.totalAmount ?? 0).toLocaleString("en-IN")}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm">
-                    <select
-                      value={order.status}
-                      onChange={(e) =>
-                        updateStatus(
-                          order._id,
-                          e.target.value as "pending" | "paid"
-                        )
-                      }
-                      className={`px-2 py-1 rounded-full text-xs font-medium border-0 focus:ring-2 focus:ring-blue-500 ${
-                        order.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="paid">Paid</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.createdAt
-                      ? new Date(order.createdAt).toLocaleDateString("en-IN")
-                      : "N/A"}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.paymentDetails.method ?? "N/A"}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => editWorkOrder(order)}
-                        className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        title="Edit Work Order"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => deleteWorkOrder(order._id)}
-                        className="flex items-center gap-1 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                        title="Delete Work Order"
-                      >
-                        <Trash size={16} />
-                      </button>
-                      <button
-                        onClick={() => generateInvoice(order, true)}
-                        className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        title="Preview Invoice"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      <button
-                        onClick={() => generateInvoice(order, false)}
-                        className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-                        title="Download Invoice"
-                      >
-                        <Download size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {previewModalOpen && (
-        <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium">Invoice Preview</h3>
-              <button
-                onClick={closePreviewModal}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="w-full h-[70vh]">
-              <iframe
-                src={previewPdfUrl}
-                className="w-full h-full border rounded"
-                title="Invoice Preview"
-              />
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={closePreviewModal}
-                className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  const link = document.createElement("a");
-                  link.href = previewPdfUrl;
-                  link.download = `Invoice_${
-                    currentWorkOrder?.customerId.name ?? "Invoice"
-                  }.pdf`;
-                  link.click();
-                  closePreviewModal();
-                }}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                Download
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editModalOpen && (
-        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium">Edit Work Order</h3>
-              <button
-                onClick={closeEditModal}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <WorkOrderForm
-              workOrder={selectedWorkOrder}
-              onSave={closeEditModal}
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search by customer name, phone, or serial number"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 pl-10"
+            />
+            <Search
+              className="absolute left-3 top-2.5 text-gray-400"
+              size={20}
             />
           </div>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={clearDateFilter}
+              className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
+              Clear Dates
+            </button>
+          </div>
         </div>
-      )}
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          {isLoading ? (
+            <div className="p-4 text-center text-gray-500">Loading...</div>
+          ) : error ? (
+            <div className="p-4 text-center text-red-500">{error}</div>
+          ) : filteredWorkOrders.length === 0 &&
+            (searchTerm || startDate || endDate) ? (
+            <div className="p-4 text-center text-gray-500">
+              No work orders found for the given search or date range.
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Sl Num
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vehicle
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Amount
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created At
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment Method
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredWorkOrders.map((order) => (
+                  <tr key={order._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.serialNumber ?? "N/A"}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.customerId?.name ?? "N/A"}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.vehicleId?.model ?? "N/A"} (
+                      {order.vehicleId?.registration_number ?? "N/A"})
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₹{(order.totalAmount ?? 0).toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <select
+                        value={order.status}
+                        onChange={(e) =>
+                          updateStatus(
+                            order._id,
+                            e.target.value as "pending" | "paid"
+                          )
+                        }
+                        className={`px-2 py-1 rounded-full text-xs font-medium border-0 focus:ring-2 focus:ring-blue-500 ${
+                          order.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="paid">Paid</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.createdAt
+                        ? new Date(order.createdAt).toLocaleDateString("en-IN")
+                        : "N/A"}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.paymentDetails?.method ?? "N/A"}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => editWorkOrder(order)}
+                          className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          title="Edit Work Order"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => deleteWorkOrder(order._id)}
+                          className="flex items-center gap-1 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                          title="Delete Work Order"
+                        >
+                          <Trash size={16} />
+                        </button>
+                        <button
+                          onClick={() => generateInvoice(order, true)}
+                          className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          title="Preview Invoice"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => generateInvoice(order, false)}
+                          className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                          title="Download Invoice"
+                        >
+                          <Download size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {previewModalOpen && (
+          <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-4xl w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">Invoice Preview</h3>
+                <button
+                  onClick={closePreviewModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="w-full h-[70vh]">
+                <iframe
+                  src={previewPdfUrl}
+                  className="w-full h-full border rounded"
+                  title="Invoice Preview"
+                />
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={closePreviewModal}
+                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    const link = document.createElement("a");
+                    link.href = previewPdfUrl;
+                    link.download = `Invoice_${
+                      currentWorkOrder?.customerId?.name ?? "Invoice"
+                    }.pdf`;
+                    link.click();
+                    closePreviewModal();
+                  }}
+                  className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Download
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editModalOpen && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">Edit Work Order</h3>
+                <button
+                  onClick={closeEditModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <WorkOrderForm
+                workOrder={selectedWorkOrder}
+                onSave={closeEditModal}
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 });
