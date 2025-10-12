@@ -33,7 +33,7 @@ const Home = () => {
           {/* --- NEW BUTTON (CALL TO ACTION) --- */}
           {/* Added a flex container to center the button */}
           <div className="flex justify-center items-center gap-4">
-            <button  onClick={()=>navigate("/dashboard")} className="inline-flex items-center justify-center gap-2 px-8 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300">
+            <button  onClick={()=>navigate("/login")} className="inline-flex items-center justify-center gap-2 px-8 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300">
               <span>Go to Dashboard</span>
               <FiArrowRight className="text-lg" />
             </button>
