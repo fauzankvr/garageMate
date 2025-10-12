@@ -59,7 +59,7 @@ const Warranties = () => {
   const {
     PasswordModal,
     openPasswordModal,
-    passwordError: verificationError,
+    // passwordError: verificationError,
     closePasswordModal,
   } = usePasswordVerification();
 
@@ -221,7 +221,7 @@ const Warranties = () => {
             Delete
           </button>
         </div>,
-      ] as (string | number | JSX.Element)[]
+      ] as (string | number )[]
   );
 
   return (

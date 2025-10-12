@@ -28,7 +28,7 @@ const Customers = () => {
   const {
     PasswordModal,
     openPasswordModal,
-    passwordError: verificationError,
+    // passwordError: verificationError,
     closePasswordModal,
   } = usePasswordVerification();
 

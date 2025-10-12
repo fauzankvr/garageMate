@@ -32,7 +32,7 @@ const Employees = () => {
   const {
     PasswordModal,
     openPasswordModal,
-    passwordError: verificationError,
+    // passwordError: verificationError,
     closePasswordModal,
   } = usePasswordVerification();
 

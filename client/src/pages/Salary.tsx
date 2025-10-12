@@ -62,7 +62,7 @@ const Salaries = () => {
   const {
     PasswordModal,
     openPasswordModal,
-    passwordError: verificationError,
+    // passwordError: verificationError,
     closePasswordModal,
   } = usePasswordVerification();
 
