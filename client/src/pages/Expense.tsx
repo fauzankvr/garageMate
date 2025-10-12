@@ -207,7 +207,7 @@ const Expenses = () => {
             Delete
           </button>
         </div>,
-      ] as (string | JSX.Element)[]
+      ] as (string )[]
   );
 
   return (
