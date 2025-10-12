@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import Table from "../components/ui/Table"; // Adjust import path
+import Table from "../components/ui/Table";
 import Sidebar from "../components/layout/Sidebar";
 import UserActions from "../components/layout/headers/UserActions";
 import instance from "../axios/axios";
+import { usePasswordVerification } from "../hooks/usePasswordVerification";
 
 interface Customer {
   _id?: string;
@@ -20,7 +21,16 @@ const Customers = () => {
     name: "",
     phone: "",
   });
-  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize the password verification hook
+  const {
+    PasswordModal,
+    openPasswordModal,
+    passwordError: verificationError,
+    closePasswordModal,
+  } = usePasswordVerification();
 
   // Fetch customers from API
   useEffect(() => {
@@ -29,8 +39,13 @@ const Customers = () => {
         const response = await instance.get("/api/customer");
         const data = response.data;
         setCustomers(data);
-      } catch (error) {
+        setError(null);
+      } catch (error: any) {
         console.error("Error fetching customers:", error);
+        setError(
+          error.response?.data?.message ||
+            "Error fetching customers. Please try again."
+        );
       }
     };
     fetchCustomers();
@@ -40,6 +55,7 @@ const Customers = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setError(null);
   };
 
   // Handle adding a new customer
@@ -51,17 +67,24 @@ const Customers = () => {
         setCustomers((prev) => [...prev, newCustomer]);
         setFormData({ name: "", phone: "" });
         setIsModalOpen(false);
+        setError(null);
       } else {
-        console.error("Failed to add customer");
+        setError("Failed to add customer.");
       }
-    } catch (error) {
-      console.error("Error adding customer:", error);
+    } catch (error: any) {
+      setError(
+        error.response?.data?.message ||
+          "Error adding customer. Please try again."
+      );
     }
   };
 
   // Handle editing a customer
   const handleEditCustomer = async () => {
-    if (!currentCustomer?._id) return;
+    if (!currentCustomer?._id) {
+      setError("No customer selected.");
+      return;
+    }
     try {
       const response = await instance.put(
         `/api/customer/${currentCustomer._id}`,
@@ -77,43 +100,58 @@ const Customers = () => {
         setFormData({ name: "", phone: "" });
         setCurrentCustomer(null);
         setIsModalOpen(false);
+        setError(null);
       } else {
-        console.error("Failed to update customer");
+        setError("Failed to update customer.");
       }
-    } catch (error) {
-      console.error("Error updating customer:", error);
+    } catch (error: any) {
+      setError(
+        error.response?.data?.message ||
+          "Error updating customer. Please try again."
+      );
     }
   };
 
   // Handle deleting a customer
-  const handleDeleteCustomer = async (id: string) => {
+  const onDelete = (id: string) => {
     if (!window.confirm("Are you sure you want to delete this customer?"))
       return;
-    try {
-      const response = await instance.delete(`/api/customer/${id}`);
-      if (response.status === 200) {
-        setCustomers((prev) => prev.filter((cust) => cust._id !== id));
-      } else {
-        console.error("Failed to delete customer");
+    openPasswordModal(async () => {
+      try {
+        const response = await instance.delete(`/api/customer/${id}`);
+        if (response.status === 200) {
+          setCustomers((prev) => prev.filter((cust) => cust._id !== id));
+          setError(null);
+          closePasswordModal();
+        } else {
+          setError("Failed to delete customer.");
+        }
+      } catch (error: any) {
+        setError(
+          error.response?.data?.message ||
+            "Error deleting customer. Please try again."
+        );
       }
-    } catch (error) {
-      console.error("Error deleting customer:", error);
-    }
+    });
   };
 
   // Open modal for adding or editing
   const openModal = (customer?: Customer) => {
-    if (customer) {
-      setCurrentCustomer(customer);
-      setFormData({
-        name: customer.name,
-        phone: customer.phone,
-      });
-    } else {
-      setCurrentCustomer(null);
-      setFormData({ name: "", phone: "" });
-    }
-    setIsModalOpen(true);
+    openPasswordModal(() => {
+      if (customer) {
+        setCurrentCustomer(customer);
+        setFormData({
+          name: customer.name,
+          phone: customer.phone,
+        });
+      } else {
+        setCurrentCustomer(null);
+        setFormData({ name: "", phone: "" });
+      }
+      setIsModalOpen(true);
+      setError(null);
+      closePasswordModal();
+    });
   };
 
   // Table headers
@@ -129,6 +167,7 @@ const Customers = () => {
     customer.name,
     customer.phone,
     <span
+      key={`status-${customer._id}`}
       className={`rounded-full px-3 py-1 text-xs font-medium ${
         customer.updatedAt
           ? "bg-green-100 text-green-700"
@@ -137,7 +176,7 @@ const Customers = () => {
     >
       {customer.updatedAt ? "Active" : "Inactive"}
     </span>,
-    <div className="flex space-x-2">
+    <div key={`actions-${customer._id}`} className="flex space-x-2">
       <button
         className="text-blue-500 text-sm hover:underline"
         onClick={() => openModal(customer)}
@@ -146,7 +185,7 @@ const Customers = () => {
       </button>
       <button
         className="text-red-500 text-sm hover:underline"
-        onClick={() => handleDeleteCustomer(customer._id!)}
+        onClick={() => onDelete(customer._id!)}
       >
         Delete
       </button>
@@ -186,65 +225,111 @@ const Customers = () => {
             </div>
           </div>
         </div>
-        <div className="w-full">
-          <Table headers={headers} data={data} />
-        </div>
-      </div>
-
-      {/* Modal for Add/Edit Customer */}
-      {isModalOpen && (
-        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">
-              {currentCustomer ? "Edit Customer" : "Add Customer"}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Phone
-                </label>
-                <input
-                  type="text"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                  required
-                />
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end space-x-2">
-              <button
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
-                onClick={() => setIsModalOpen(false)}
+        {error && (
+          <div
+            className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg text-sm"
+            role="alert"
+          >
+            {error}
+          </div>
+        )}
+        {filteredCustomers.length === 0 && (
+          <div className="p-4 text-center text-gray-500">
+            {searchQuery
+              ? `No customers found for "${searchQuery}".`
+              : "No customers available."}
+          </div>
+        )}
+        {filteredCustomers.length > 0 && (
+          <div className="w-full">
+            <Table headers={headers} data={data} />
+          </div>
+        )}
+        {/* Render Password Modal */}
+        <PasswordModal />
+        {/* Modal for Add/Edit Customer */}
+        {isModalOpen && (
+          <div
+            className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50"
+            role="dialog"
+            aria-labelledby="modal-title"
+            aria-modal="true"
+          >
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h2
+                id="modal-title"
+                className="text-xl font-semibold mb-4"
               >
-                Cancel
-              </button>
-              <button
-                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                onClick={
-                  currentCustomer ? handleEditCustomer : handleAddCustomer
-                }
-              >
-                {currentCustomer ? "Update" : "Add"}
-              </button>
+                {currentCustomer ? "Edit Customer" : "Add Customer"}
+              </h2>
+              {error && (
+                <div
+                  className="text-red-500 text-sm mb-4"
+                  role="alert"
+                >
+                  {error}
+                </div>
+              )}
+              <div className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="phone"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Phone <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                  onClick={
+                    currentCustomer ? handleEditCustomer : handleAddCustomer
+                  }
+                >
+                  {currentCustomer ? "Update" : "Add"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

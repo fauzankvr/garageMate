@@ -6,6 +6,7 @@ import Sidebar from "../components/layout/Sidebar";
 import InputField from "../components/common/input/input";
 import type { Warranty } from "../types/Warranty";
 import WarrantyForm from "../components/ui/WarrantyForm";
+import { usePasswordVerification } from "../hooks/usePasswordVerification";
 
 // Define the Field interface
 interface Field {
@@ -52,10 +53,29 @@ const Warranties = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isEditLoading, setIsEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Initialize the password verification hook
+  const {
+    PasswordModal,
+    openPasswordModal,
+    passwordError: verificationError,
+    closePasswordModal,
+  } = usePasswordVerification();
 
   useEffect(() => {
-    fetchWarranties();
+    const fetchData = async () => {
+      try {
+        await fetchWarranties();
+        setEditError(null);
+      } catch (error: any) {
+        setEditError(
+          error.response?.data?.message ||
+            "Error fetching warranties. Please try again."
+        );
+      }
+    };
+    fetchData();
   }, []);
 
   const validateEditFields = (): boolean => {
@@ -102,9 +122,36 @@ const Warranties = () => {
   };
 
   const onEdit = (item: Warranty) => {
-    prepareEdit(item);
-    setEditError(null);
-    setIsEditModalOpen(true);
+    openPasswordModal(() => {
+      prepareEdit(item);
+      setEditError(null);
+      setIsEditModalOpen(true);
+      closePasswordModal();
+    });
+  };
+
+  const onDelete = (item: Warranty) => {
+    if (!window.confirm("Are you sure you want to delete this warranty?")) return;
+    openPasswordModal(async () => {
+      try {
+        await handleDelete(item);
+        setEditError(null);
+        closePasswordModal();
+      } catch (error: any) {
+        setEditError(
+          error.response?.data?.message ||
+            "Error deleting warranty. Please try again."
+        );
+      }
+    });
+  };
+
+  const openAddModal = () => {
+    openPasswordModal(() => {
+      setIsAddModalOpen(true);
+      setEditError(null);
+      closePasswordModal();
+    });
   };
 
   const closeEditModal = () => {
@@ -113,12 +160,9 @@ const Warranties = () => {
     setIsEditLoading(false);
   };
 
-  const openAddModal = () => {
-    setIsAddModalOpen(true);
-  };
-
   const closeAddModal = () => {
     setIsAddModalOpen(false);
+    setEditError(null);
   };
 
   const handleEditSubmitWithLoading = async (
@@ -134,9 +178,9 @@ const Warranties = () => {
       await handleEditSubmit(e);
       closeEditModal();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "Failed to update warranty";
-      setEditError(errorMessage);
+      setEditError(
+        error.response?.data?.message || "Failed to update warranty"
+      );
     } finally {
       setIsEditLoading(false);
     }
@@ -158,7 +202,7 @@ const Warranties = () => {
         item.numberPlate,
         new Date(item.issuedDate).toLocaleDateString(),
         new Date(item.lastDueDate).toLocaleDateString(),
-        <div className="space-x-2" key={`${item._id}-actions`}>
+        <div key={`actions-${item._id}`} className="space-x-2">
           <button
             onClick={() => onEdit(item)}
             className="text-blue-500 hover:underline"
@@ -169,7 +213,7 @@ const Warranties = () => {
           </button>
           <span className="text-gray-400">|</span>
           <button
-            onClick={() => handleDelete(item)}
+            onClick={() => onDelete(item)}
             className="text-red-500 hover:underline"
             disabled={isEditLoading}
             aria-label={`Delete warranty for ${item.numberPlate}`}
@@ -177,7 +221,7 @@ const Warranties = () => {
             Delete
           </button>
         </div>,
-      ] as (string | number)[]
+      ] as (string | number | JSX.Element)[]
   );
 
   return (
@@ -192,7 +236,6 @@ const Warranties = () => {
           </h1>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
             <InputField
-              
               name="search"
               type="text"
               value={searchQuery}
@@ -212,9 +255,28 @@ const Warranties = () => {
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto bg-white shadow rounded-lg">
-          <Table headers={headers} data={data} />
-        </div>
+        {editError && (
+          <div
+            className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg text-sm"
+            role="alert"
+          >
+            {editError}
+          </div>
+        )}
+        {filteredWarranties.length === 0 && (
+          <div className="p-4 text-center text-gray-500">
+            {searchQuery
+              ? `No warranties found for "${searchQuery}".`
+              : "No warranties available."}
+          </div>
+        )}
+        {filteredWarranties.length > 0 && (
+          <div className="overflow-x-auto bg-white shadow rounded-lg">
+            <Table headers={headers} data={data} />
+          </div>
+        )}
+        {/* Render Password Modal */}
+        <PasswordModal />
         {isEditModalOpen && (
           <div
             className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50"

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import useExpense from "../hooks/useExpense";
 import UserActions from "../components/layout/headers/UserActions";
@@ -6,6 +7,7 @@ import Sidebar from "../components/layout/Sidebar";
 import InputField from "../components/common/input/input";
 import type { Expense } from "../types/Expense";
 import ExpenseForm from "../components/ui/ExpeseForm";
+import { usePasswordVerification } from "../hooks/usePasswordVerification";
 
 // Define the Field interface
 interface Field {
@@ -55,6 +57,14 @@ const Expenses = () => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  // Initialize the password verification hook
+  const {
+    PasswordModal,
+    openPasswordModal,
+    passwordError,
+    closePasswordModal,
+  } = usePasswordVerification();
 
   useEffect(() => {
     fetchExpenses();
@@ -107,9 +117,27 @@ const Expenses = () => {
   };
 
   const onEdit = (item: Expense) => {
-    prepareEdit(item);
-    setEditError(null);
-    setIsEditModalOpen(true);
+    openPasswordModal(() => {
+      prepareEdit(item);
+      setEditError(null);
+      setIsEditModalOpen(true);
+      closePasswordModal(); // Close modal on success
+    });
+  };
+
+  const onDelete = (item: Expense) => {
+    if (!window.confirm("Are you sure you want to delete this expense?")) return;
+
+    openPasswordModal(async () => {
+      try {
+        await handleDelete(item);
+        closePasswordModal(); // Close modal on success
+      } catch (error: any) {
+        setEditError(
+          error.response?.data?.message || "Failed to delete expense"
+        );
+      }
+    });
   };
 
   const closeEditModal = () => {
@@ -162,7 +190,7 @@ const Expenses = () => {
         item.description || "No description",
         `₹${item.amount.toFixed(2)}`,
         new Date(item.date).toLocaleDateString(),
-        <div className="space-x-2" key={`${item._id}-actions`}>
+        <div className="space-x-2" key={`actions-${item._id}`}>
           <button
             onClick={() => onEdit(item)}
             className="text-blue-500 hover:underline text-sm"
@@ -172,14 +200,14 @@ const Expenses = () => {
           </button>
           <span className="text-gray-400">|</span>
           <button
-            onClick={() => handleDelete(item)}
+            onClick={() => onDelete(item)}
             className="text-red-500 hover:underline text-sm"
             disabled={isEditLoading}
           >
             Delete
           </button>
         </div>,
-      ] as (string | number )[]
+      ] as (string | JSX.Element)[]
   );
 
   return (
@@ -315,8 +343,26 @@ const Expenses = () => {
               {filteredExpenses.length === 1 ? "expense" : "expenses"} found
             </span>
           </div>
-          <Table headers={headers} data={data} />
+          {passwordError && (
+            <div className="p-4 text-center text-red-500">{passwordError}</div>
+          )}
+          {editError && (
+            <div className="p-4 text-center text-red-500">{editError}</div>
+          )}
+          {filteredExpenses.length === 0 && (
+            <div className="p-4 text-center text-gray-500">
+              {searchTerm || startDate || endDate || selectedCategory !== "all"
+                ? "No expenses found for the applied filters."
+                : "No expenses available."}
+            </div>
+          )}
+          {filteredExpenses.length > 0 && (
+            <Table headers={headers} data={data} />
+          )}
         </div>
+
+        {/* Render Password Modal */}
+        <PasswordModal />
 
         {/* Edit Modal */}
         {isEditModalOpen && (

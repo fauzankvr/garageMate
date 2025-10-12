@@ -5,7 +5,9 @@ import Table from "../components/ui/Table";
 import Sidebar from "../components/layout/Sidebar";
 import UserActions from "../components/layout/headers/UserActions";
 import instance from "../axios/axios";
+import { usePasswordVerification } from "../hooks/usePasswordVerification";
 
+// Interfaces remain unchanged
 interface Customer {
   _id: string;
   name: string;
@@ -29,6 +31,7 @@ interface NewCustomer {
 }
 
 const Vehicles = () => {
+  // Existing state declarations (unchanged)
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -53,7 +56,15 @@ const Vehicles = () => {
   const [error, setError] = useState<string | null>(null);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
 
-  // Normalize vehicle data to ensure customerName is populated
+  // Initialize the password verification hook
+  const {
+    PasswordModal,
+    openPasswordModal,
+    passwordError,
+    closePasswordModal,
+  } = usePasswordVerification();
+
+  // Normalize vehicle data (unchanged)
   const normalizeVehicle = (vehicle: any): Vehicle => ({
     ...vehicle,
     customerName:
@@ -66,13 +77,12 @@ const Vehicles = () => {
         : vehicle.customerId || "",
   });
 
-  // Fetch vehicles from API
+  // Fetch vehicles (unchanged)
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
         setLoading(true);
         const response = await instance.get("/api/vehicle");
-        console.log("API Response:", response.data);
         const data = response.data.data || response.data;
         const normalizedVehicles = Array.isArray(data)
           ? data.map(normalizeVehicle)
@@ -89,13 +99,12 @@ const Vehicles = () => {
     fetchVehicles();
   }, []);
 
-  // Fetch customers for search
+  // Fetch customers (unchanged)
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
         setLoadingCustomers(true);
         const response = await instance.get("/api/customer");
-        console.log("Customer API Response:", response.data);
         const data = response.data.data || response.data;
         setCustomers(Array.isArray(data) ? data : []);
         setFilteredCustomers(Array.isArray(data) ? data : []);
@@ -109,7 +118,7 @@ const Vehicles = () => {
     fetchCustomers();
   }, []);
 
-  // Debounced vehicle search handler
+  // Debounced search handlers (unchanged)
   const debouncedSearch = useCallback(
     debounce((term: string) => {
       setFilteredVehicles(
@@ -130,7 +139,6 @@ const Vehicles = () => {
     debouncedSearch(searchTerm);
   }, [searchTerm, debouncedSearch]);
 
-  // Debounced customer search handler
   const debouncedCustomerSearch = useCallback(
     debounce((term: string) => {
       setFilteredCustomers(
@@ -151,13 +159,13 @@ const Vehicles = () => {
     debouncedCustomerSearch(customerSearchTerm);
   }, [customerSearchTerm, debouncedCustomerSearch]);
 
-  // Handle form input changes
+  // Handle input changes (unchanged)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle customer selection
+  // Handle customer selection (unchanged)
   const handleCustomerSelect = (customer: Customer) => {
     setFormData((prev) => ({
       ...prev,
@@ -166,17 +174,16 @@ const Vehicles = () => {
     }));
     setCustomerSearchTerm(customer.name);
     setFilteredCustomers([]);
-    setError(null); // Clear any errors when a customer is selected
+    setError(null);
   };
 
-  // Create new customer
+  // Create customer (unchchanged)
   const createCustomer = async () => {
     try {
       const response = await instance.post<Customer>(
         "/api/customer",
         newCustomer
       );
-      console.log("Create Customer Response:", response.data);
       const newCustomerData = response.data;
       setCustomers((prev) => [...prev, newCustomerData]);
       setFilteredCustomers((prev) => [...prev, newCustomerData]);
@@ -188,17 +195,16 @@ const Vehicles = () => {
       setCustomerSearchTerm(newCustomerData.name);
       setNewCustomer({ name: "", phone: "" });
       setIsCustomerModalOpen(false);
-      setError(null); // Clear any errors
+      setError(null);
     } catch (error: any) {
       console.error("Error creating customer:", error);
       setError("Failed to create customer. Please try again.");
     }
   };
 
-  // Handle adding a new vehicle
+  // Handle adding a vehicle (unchanged)
   const handleAddVehicle = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Form Data before submission:", formData); // Debug log
     if (!formData.customerId) {
       setError("Please select a customer.");
       return;
@@ -206,7 +212,6 @@ const Vehicles = () => {
     try {
       const { customerName, ...apiFormData } = formData;
       const response = await instance.post("/api/vehicle", apiFormData);
-      console.log("Add Vehicle Response:", response.data.data);
       if (response.status === 201) {
         const newVehicle = normalizeVehicle(response.data.data);
         setVehicles((prev) => [...prev, newVehicle]);
@@ -219,9 +224,8 @@ const Vehicles = () => {
         });
         setCustomerSearchTerm("");
         setIsAddModalOpen(false);
-        setError(null); // Clear any errors
+        setError(null);
       } else {
-        console.error("Failed to add vehicle");
         setError("Failed to add vehicle.");
       }
     } catch (error: any) {
@@ -230,7 +234,7 @@ const Vehicles = () => {
     }
   };
 
-  // Handle editing a vehicle
+  // Handle editing a vehicle (unchanged)
   const handleEditVehicle = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentVehicle?._id || !formData.customerId) {
@@ -243,7 +247,6 @@ const Vehicles = () => {
         `/api/vehicle/${currentVehicle._id}`,
         apiFormData
       );
-      console.log("Edit Vehicle Response:", response.data);
       if (response.status === 200) {
         const updatedVehicle = normalizeVehicle(response.data);
         setVehicles((prev) =>
@@ -265,9 +268,8 @@ const Vehicles = () => {
         setCustomerSearchTerm("");
         setCurrentVehicle(null);
         setIsEditModalOpen(false);
-        setError(null); // Clear any errors
+        setError(null);
       } else {
-        console.error("Failed to update vehicle");
         setError("Failed to update vehicle.");
       }
     } catch (error: any) {
@@ -276,44 +278,50 @@ const Vehicles = () => {
     }
   };
 
-  // Handle deleting a vehicle
-  const handleDeleteVehicle = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this vehicle?"))
-      return;
-    try {
-      const response = await instance.delete(`/api/vehicle/${id}`);
-      if (response.status === 200) {
-        setVehicles((prev) => prev.filter((veh) => veh._id !== id));
-        setFilteredVehicles((prev) => prev.filter((veh) => veh._id !== id));
-        setError(null); // Clear any errors
-      } else {
-        console.error("Failed to delete vehicle");
-        setError("Failed to delete vehicle.");
+  // Modified handleDeleteVehicle to require password verification
+  const handleDeleteVehicle = (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this vehicle?")) return;
+
+    // Open password modal and pass the delete action
+    openPasswordModal(async () => {
+      try {
+        const response = await instance.delete(`/api/vehicle/${id}`);
+        if (response.status === 200) {
+          setVehicles((prev) => prev.filter((veh) => veh._id !== id));
+          setFilteredVehicles((prev) => prev.filter((veh) => veh._id !== id));
+          setError(null);
+          closePasswordModal(); // Close modal on success
+        } else {
+          setError("Failed to delete vehicle.");
+        }
+      } catch (error: any) {
+        console.error("Error deleting vehicle:", error);
+        setError("Error deleting vehicle. Please try again.");
       }
-    } catch (error: any) {
-      console.error("Error deleting vehicle:", error);
-      setError("Error deleting vehicle. Please try again.");
-    }
-  };
-
-  // Open edit modal
-  const openEditModal = (vehicle: Vehicle) => {
-    setCurrentVehicle(vehicle);
-    setFormData({
-      model: vehicle.model,
-      registration_number: vehicle.registration_number,
-      customerId:
-        typeof vehicle.customerId === "string"
-          ? vehicle.customerId
-          : vehicle.customerId._id,
-      customerName: vehicle.customerName,
     });
-    setCustomerSearchTerm(vehicle.customerName);
-    setIsEditModalOpen(true);
-    setError(null); // Clear any errors
   };
 
-  // Table headers
+  // Modified openEditModal to require password verification
+  const openEditModal = (vehicle: Vehicle) => {
+    openPasswordModal(() => {
+      setCurrentVehicle(vehicle);
+      setFormData({
+        model: vehicle.model,
+        registration_number: vehicle.registration_number,
+        customerId:
+          typeof vehicle.customerId === "string"
+            ? vehicle.customerId
+            : vehicle.customerId._id,
+        customerName: vehicle.customerName,
+      });
+      setCustomerSearchTerm(vehicle.customerName);
+      setIsEditModalOpen(true);
+      setError(null);
+      closePasswordModal(); // Close modal on success
+    });
+  };
+
+  // Table headers (unchanged)
   const headers = [
     "Model",
     "Registration Number",
@@ -323,7 +331,7 @@ const Vehicles = () => {
     "Actions",
   ];
 
-  // Table data
+  // Table data (updated to use modified openEditModal and handleDeleteVehicle)
   const data = filteredVehicles.map((vehicle) => [
     vehicle.model || "N/A",
     vehicle.registration_number || "N/A",
@@ -334,6 +342,7 @@ const Vehicles = () => {
           ? "bg-green-100 text-green-700 rounded-full px-3 py-1"
           : ""
       }`}
+      key={`service-${vehicle._id}`}
     >
       {vehicle.serviceCount === 10 ? "Free" : vehicle.serviceCount ?? 0}
     </span>,
@@ -343,10 +352,11 @@ const Vehicles = () => {
           ? "bg-green-100 text-green-700"
           : "bg-gray-100 text-gray-500"
       }`}
+      key={`status-${vehicle._id}`}
     >
       {vehicle.updatedAt ? "Active" : "Inactive"}
     </span>,
-    <div className="flex gap-2">
+    <div className="flex gap-2" key={`actions-${vehicle._id}`}>
       <button
         onClick={() => openEditModal(vehicle)}
         className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -407,6 +417,9 @@ const Vehicles = () => {
             </div>
           )}
           {error && <div className="p-4 text-center text-red-500">{error}</div>}
+          {passwordError && (
+            <div className="p-4 text-center text-red-500">{passwordError}</div>
+          )}
           {!loading && !error && filteredVehicles.length === 0 && (
             <div className="p-4 text-center text-gray-500">
               {searchTerm
@@ -418,6 +431,9 @@ const Vehicles = () => {
             <Table headers={headers} data={data} />
           )}
         </div>
+
+        {/* Render Password Modal */}
+        <PasswordModal />
 
         {/* Edit Vehicle Modal */}
         {isEditModalOpen && (

@@ -4,6 +4,7 @@ import Sidebar from "../components/layout/Sidebar";
 import Table from "../components/ui/Table";
 import useService from "../hooks/useServices";
 import InputField from "../components/common/input/input";
+import { usePasswordVerification } from "../hooks/usePasswordVerification";
 
 const Services = () => {
   const {
@@ -25,15 +26,36 @@ const Services = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Initialize the password verification hook
+  const {
+    PasswordModal,
+    openPasswordModal,
+    passwordError,
+    closePasswordModal,
+  } = usePasswordVerification();
+
   // Simulate API call
   useEffect(() => {
     fetchServices();
   }, []);
 
-  // Modified to open edit modal and prepare fields
-  const onEdit = (item:any) => {
-    prepareEdit(item);
-    setIsEditModalOpen(true);
+  // Modified to open edit modal with password verification
+  const onEdit = (item: any) => {
+    openPasswordModal(() => {
+      prepareEdit(item);
+      setIsEditModalOpen(true);
+      closePasswordModal(); // Close modal on success
+    });
+  };
+
+  // Modified to require password verification for deletion
+  const onDelete = (item: any) => {
+    if (!window.confirm("Are you sure you want to delete this service?")) return;
+
+    openPasswordModal(() => {
+      handleDelete(item);
+      closePasswordModal(); // Close modal on success
+    });
   };
 
   // Close modals
@@ -46,14 +68,14 @@ const Services = () => {
   };
 
   // Handle form submission for editing
-  const onSubmitEdit = (e:any) => {
+  const onSubmitEdit = (e: any) => {
     e.preventDefault();
     handleEditSubmit(e);
     closeEditModal();
   };
 
   // Handle form submission for creating
-  const onSubmitCreate = (e:any) => {
+  const onSubmitCreate = (e: any) => {
     e.preventDefault();
     handleCreateSubmit(e);
     closeCreateModal();
@@ -74,10 +96,11 @@ const Services = () => {
       className={`px-3 py-1 rounded-full text-xs font-medium ${
         item.status ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
       }`}
+      key={`status-${item.serviceName}`}
     >
       {item.status ? "Active" : "Inactive"}
     </span>,
-    <div className="space-x-2">
+    <div className="space-x-2" key={`actions-${item.serviceName}`}>
       <button
         onClick={() => onEdit(item)}
         className="text-blue-500 hover:underline"
@@ -86,7 +109,7 @@ const Services = () => {
       </button>
       <span className="text-gray-400">|</span>
       <button
-        onClick={() => handleDelete(item)}
+        onClick={() => onDelete(item)}
         className="text-red-500 hover:underline"
       >
         Delete
@@ -129,9 +152,27 @@ const Services = () => {
             Add New Service
           </button>
           <div className="overflow-x-auto bg-white shadow rounded-lg">
-            <Table headers={headers} data={data} />
+            {services.length === 0 && !searchTerm && (
+              <div className="p-4 text-center text-gray-500">
+                No services available.
+              </div>
+            )}
+            {filteredServices.length === 0 && searchTerm && (
+              <div className="p-4 text-center text-gray-500">
+                No services found for "{searchTerm}".
+              </div>
+            )}
+            {passwordError && (
+              <div className="p-4 text-center text-red-500">{passwordError}</div>
+            )}
+            {filteredServices.length > 0 && (
+              <Table headers={headers} data={data} />
+            )}
           </div>
         </div>
+
+        {/* Render Password Modal */}
+        <PasswordModal />
 
         {/* Edit Modal */}
         {isEditModalOpen && (

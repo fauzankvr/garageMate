@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import useProduct from "../hooks/useProduct";
 import UserActions from "../components/layout/headers/UserActions";
@@ -6,6 +7,7 @@ import Sidebar from "../components/layout/Sidebar";
 import ProductForm from "../components/ui/ProductForm";
 import InputField from "../components/common/input/input";
 import type { Product } from "../types/Products";
+import { usePasswordVerification } from "../hooks/usePasswordVerification";
 
 // Define the Field interface
 interface Field {
@@ -50,15 +52,39 @@ const Products = () => {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Initialize the password verification hook
+  const {
+    PasswordModal,
+    openPasswordModal,
+    passwordError,
+    closePasswordModal,
+  } = usePasswordVerification();
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
   const onEdit = (item: Product) => {
-    prepareEdit(item);
-    setIsEditModalOpen(true);
+    openPasswordModal(() => {
+      prepareEdit(item);
+      setIsEditModalOpen(true);
+      closePasswordModal(); // Close modal on success
+    });
+  };
+
+  const onDelete = (item: Product) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+
+    openPasswordModal(async () => {
+      try {
+        await handleDelete(item);
+        closePasswordModal(); // Close modal on success
+      } catch (error: any) {
+        console.error("Error deleting product:", error);
+      }
+    });
   };
 
   const closeEditModal = () => {
@@ -86,7 +112,7 @@ const Products = () => {
         item.price.toString(),
         item.stock != null ? item.stock.toString() : "0",
         item.brand,
-        <div className="space-x-2" key={`${item._id}-actions`}>
+        <div className="space-x-2" key={`actions-${item._id}`}>
           <button
             onClick={() => onEdit(item)}
             className="text-blue-500 hover:underline"
@@ -95,13 +121,13 @@ const Products = () => {
           </button>
           <span className="text-gray-400">|</span>
           <button
-            onClick={() => handleDelete(item)}
+            onClick={() => onDelete(item)}
             className="text-red-500 hover:underline"
           >
             Delete
           </button>
         </div>,
-      ] as (string | number)[]
+      ] as (string | number | JSX.Element)[]
   );
 
   return (
@@ -135,8 +161,25 @@ const Products = () => {
           </div>
         </div>
         <div className="overflow-x-auto bg-white shadow rounded-lg">
-          <Table headers={headers} data={data} />
+          {products.length === 0 && !searchQuery && (
+            <div className="p-4 text-center text-gray-500">
+              No products available.
+            </div>
+          )}
+          {filteredProducts.length === 0 && searchQuery && (
+            <div className="p-4 text-center text-gray-500">
+              No products found for "{searchQuery}".
+            </div>
+          )}
+          {passwordError && (
+            <div className="p-4 text-center text-red-500">{passwordError}</div>
+          )}
+          {filteredProducts.length > 0 && (
+            <Table headers={headers} data={data} />
+          )}
         </div>
+        {/* Render Password Modal */}
+        <PasswordModal />
         {isEditModalOpen && (
           <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
