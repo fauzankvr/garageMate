@@ -1,21 +1,11 @@
-   
-    class AuthController {
-//   static async signup(req: Request, res: Response) {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//       return res.status(400).json({ errors: errors.array() });
-//     }
+import { Request, Response } from "express";
 
-//     try {
-//       const { phoneNumber, password } = req.body;
-//       const { user, token } = await AuthService.signup(phoneNumber, password);
-//       res.status(201).json({ user: { _id: user._id, phoneNumber: user.phoneNumber }, token });
-//     } catch (error: any) {
-//       res.status(400).json({ error: error.message });
-//     }
-//   }
+interface LoginRequestBody {
+  password: string;
+}
 
- static async login(req: Request, res: Response) {
+class AuthController {
+  static async login(req: Request<{}, {}, LoginRequestBody>, res: Response) {
     const { password } = req.body;
     const VALID_PASSWORD = process.env.ADMIN_PASSWORD || "shahul@123";
 
@@ -31,4 +21,4 @@
   }
 }
 
-export default AuthController
+export default AuthController;
