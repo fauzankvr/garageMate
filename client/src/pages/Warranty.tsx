@@ -56,12 +56,8 @@ const Warranties = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Initialize the password verification hook
-  const {
-    PasswordModal,
-    openPasswordModal,
-    // passwordError: verificationError,
-    closePasswordModal,
-  } = usePasswordVerification();
+  const { PasswordModal, openPasswordModal, closePasswordModal } =
+    usePasswordVerification();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,7 +72,7 @@ const Warranties = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [fetchWarranties]);
 
   const validateEditFields = (): boolean => {
     for (const field of editFields) {
@@ -121,6 +117,7 @@ const Warranties = () => {
     return true;
   };
 
+  // EDIT - Requires password verification
   const onEdit = (item: Warranty) => {
     openPasswordModal(() => {
       prepareEdit(item);
@@ -130,28 +127,39 @@ const Warranties = () => {
     });
   };
 
+  // DELETE - Password BEFORE confirmation
   const onDelete = (item: Warranty) => {
-    if (!window.confirm("Are you sure you want to delete this warranty?")) return;
-    openPasswordModal(async () => {
-      try {
-        await handleDelete(item);
-        setEditError(null);
+    // First open password modal
+    openPasswordModal(() => {
+      // After password verification, show confirmation
+      const shouldDelete = window.confirm(
+        `Are you sure you want to delete the warranty for ${item.customerName}?\n\nVehicle: ${item.numberPlate}\nPackage: ${item.packageName}\nDuration: ${item.duration} months\n\nThis action cannot be undone.`
+      );
+
+      if (shouldDelete) {
+        // Proceed with actual delete
+        handleDelete(item)
+          .then(() => {
+            setEditError(null);
+            closePasswordModal();
+          })
+          .catch((error: any) => {
+            setEditError(
+              error.response?.data?.message ||
+                "Error deleting warranty. Please try again."
+            );
+          });
+      } else {
         closePasswordModal();
-      } catch (error: any) {
-        setEditError(
-          error.response?.data?.message ||
-            "Error deleting warranty. Please try again."
-        );
       }
     });
   };
 
+  // ADD - NO PASSWORD REQUIRED
   const openAddModal = () => {
-    openPasswordModal(() => {
-      setIsAddModalOpen(true);
-      setEditError(null);
-      closePasswordModal();
-    });
+    // Direct modal open without password
+    setIsAddModalOpen(true);
+    setEditError(null);
   };
 
   const closeEditModal = () => {
@@ -196,7 +204,7 @@ const Warranties = () => {
       [
         item.packageName,
         item.duration.toString(),
-        item.cost.toString(),
+        `₹${item.cost.toString()}`,
         item.allowedVisits.toString(),
         item.customerName,
         item.numberPlate,
@@ -205,8 +213,9 @@ const Warranties = () => {
         <div key={`actions-${item._id}`} className="space-x-2">
           <button
             onClick={() => onEdit(item)}
-            className="text-blue-500 hover:underline"
+            className="text-blue-500 hover:underline disabled:opacity-50"
             disabled={isEditLoading}
+            title="Edit warranty (requires password)"
             aria-label={`Edit warranty for ${item.numberPlate}`}
           >
             Edit
@@ -214,14 +223,15 @@ const Warranties = () => {
           <span className="text-gray-400">|</span>
           <button
             onClick={() => onDelete(item)}
-            className="text-red-500 hover:underline"
+            className="text-red-500 hover:underline disabled:opacity-50"
             disabled={isEditLoading}
+            title="Delete warranty (password required before confirmation)"
             aria-label={`Delete warranty for ${item.numberPlate}`}
           >
             Delete
           </button>
         </div>,
-      ] as (string | number )[]
+      ] as (string | number | JSX.Element)[]
   );
 
   return (
@@ -247,36 +257,42 @@ const Warranties = () => {
               <UserActions />
               <button
                 onClick={openAddModal}
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-                aria-label="Add new warranty"
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200"
+                aria-label="Add new warranty (no password required)"
               >
                 Add New Warranty
               </button>
             </div>
           </div>
         </div>
+
         {editError && (
           <div
-            className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg text-sm"
+            className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg text-sm border-l-4 border-red-500"
             role="alert"
           >
             {editError}
           </div>
         )}
+
         {filteredWarranties.length === 0 && (
-          <div className="p-4 text-center text-gray-500">
+          <div className="p-4 text-center text-gray-500 bg-white rounded-lg shadow">
             {searchQuery
               ? `No warranties found for "${searchQuery}".`
-              : "No warranties available."}
+              : "No warranties available. Add your first warranty!"}
           </div>
         )}
+
         {filteredWarranties.length > 0 && (
           <div className="overflow-x-auto bg-white shadow rounded-lg">
             <Table headers={headers} data={data} />
           </div>
         )}
-        {/* Render Password Modal */}
+
+        {/* Render Password Modal - Only for Edit/Delete */}
         <PasswordModal />
+
+        {/* Edit Modal - Requires password to open */}
         {isEditModalOpen && (
           <div
             className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50"
@@ -284,15 +300,58 @@ const Warranties = () => {
             aria-labelledby="edit-warranty-title"
             aria-modal="true"
           >
-            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
-              <h2 id="edit-warranty-title" className="text-xl font-bold mb-4">
-                Edit Warranty
-              </h2>
+            <div className="bg-white p-6 rounded-lg shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 id="edit-warranty-title" className="text-xl font-bold">
+                  Edit Warranty
+                </h2>
+                <button
+                  onClick={closeEditModal}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                  disabled={isEditLoading}
+                  aria-label="Close edit modal"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
               {editError && (
-                <div className="text-red-500 text-sm mb-4" role="alert">
+                <div
+                  className="text-red-500 text-sm mb-4 p-2 bg-red-50 rounded border border-red-200"
+                  role="alert"
+                >
                   {editError}
                 </div>
               )}
+
+              {/* Visual indicator for edit operations */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                <svg
+                  className="w-4 h-4 inline mr-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Password verification was required to edit this warranty.
+              </div>
+
               <form
                 onSubmit={handleEditSubmitWithLoading}
                 className="space-y-4"
@@ -304,7 +363,10 @@ const Warranties = () => {
                       htmlFor={field.name}
                       className="block text-sm font-medium text-gray-600 mb-1"
                     >
-                      {field.label}
+                      {field.label}{" "}
+                      {field.name !== "notes" && (
+                        <span className="text-red-500">*</span>
+                      )}
                     </label>
                     <InputField
                       label={field.label}
@@ -317,6 +379,7 @@ const Warranties = () => {
                         setEditError(null);
                       }}
                       className="w-full"
+                      disabled={isEditLoading}
                       aria-invalid={!!editError}
                       aria-describedby={
                         editError ? `${field.name}-error` : undefined
@@ -324,11 +387,11 @@ const Warranties = () => {
                     />
                   </div>
                 ))}
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end space-x-2 pt-4">
                   <button
                     type="button"
                     onClick={closeEditModal}
-                    className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition"
+                    className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition disabled:opacity-50"
                     disabled={isEditLoading}
                     aria-label="Cancel edit"
                   >
@@ -336,14 +399,14 @@ const Warranties = () => {
                   </button>
                   <button
                     type="submit"
-                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition disabled:bg-blue-400 disabled:cursor-not-allowed"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center"
                     disabled={isEditLoading}
                     aria-busy={isEditLoading}
                   >
                     {isEditLoading ? (
-                      <span className="flex items-center justify-center">
+                      <>
                         <svg
-                          className="animate-spin h-5 w-5 mr-2 text-white"
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
@@ -355,17 +418,17 @@ const Warranties = () => {
                             r="10"
                             stroke="currentColor"
                             strokeWidth="4"
-                          />
+                          ></circle>
                           <path
                             className="opacity-75"
                             fill="currentColor"
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
+                          ></path>
                         </svg>
                         Saving...
-                      </span>
+                      </>
                     ) : (
-                      "Save"
+                      "Save Changes"
                     )}
                   </button>
                 </div>
@@ -373,6 +436,8 @@ const Warranties = () => {
             </div>
           </div>
         )}
+
+        {/* Add Modal - NO PASSWORD REQUIRED */}
         {isAddModalOpen && (
           <div
             className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50"
@@ -380,23 +445,60 @@ const Warranties = () => {
             aria-labelledby="add-warranty-title"
             aria-modal="true"
           >
-            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-              <h2 id="add-warranty-title" className="text-xl font-bold mb-4">
-                Add New Warranty
-              </h2>
+            <div className="bg-white p-6 rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 id="add-warranty-title" className="text-xl font-bold">
+                  Add New Warranty
+                </h2>
+                <button
+                  onClick={closeAddModal}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                  aria-label="Close add modal"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Visual indicator for add operations */}
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                <svg
+                  className="w-4 h-4 inline mr-2"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                No password required to add new warranties.
+              </div>
+
               <WarrantyForm
                 setWarranties={setWarranties}
                 onSuccess={closeAddModal}
               />
               <div className="flex justify-end mt-4">
-                <button
+                {/* <button
                   type="button"
                   onClick={closeAddModal}
-                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition"
-                  aria-label="Cancel add"
+                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200"
                 >
                   Cancel
-                </button>
+                </button> */}
               </div>
             </div>
           </div>

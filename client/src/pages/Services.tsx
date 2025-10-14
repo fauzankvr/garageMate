@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { Eye, EyeOff, X } from "lucide-react";
 import UserActions from "../components/layout/headers/UserActions";
 import Sidebar from "../components/layout/Sidebar";
 import Table from "../components/ui/Table";
 import useService from "../hooks/useServices";
 import InputField from "../components/common/input/input";
-import { usePasswordVerification } from "../hooks/usePasswordVerification";
+import instance from "../axios/axios";
 
 const Services = () => {
   const {
@@ -25,37 +26,84 @@ const Services = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Initialize the password verification hook
-  const {
-    PasswordModal,
-    openPasswordModal,
-    passwordError,
-    closePasswordModal,
-  } = usePasswordVerification();
+  const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    type: "edit" | "delete";
+    item?: any;
+  } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Simulate API call
   useEffect(() => {
     fetchServices();
-  }, []);
+  }, [fetchServices]);
+
+  // Verify password via API
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    try {
+      const res = await instance.post("/api/customer/verify-password", {
+        password,
+      });
+      return res.data.success;
+    } catch (err: any) {
+      console.error("Error verifying password:", err);
+      setPasswordError(
+        err.response?.data?.message || "Failed to verify password"
+      );
+      return false;
+    }
+  };
+
+  // Handle password submission
+  const handlePasswordSubmit = async () => {
+    if (!password) {
+      setPasswordError("Please enter a password");
+      return;
+    }
+
+    const isValid = await verifyPassword(password);
+    if (isValid) {
+      setPasswordError(null);
+      setPasswordModalOpen(false);
+      setPassword("");
+
+      if (pendingAction?.type === "edit" && pendingAction.item) {
+        prepareEdit(pendingAction.item);
+        setIsEditModalOpen(true);
+      } else if (pendingAction?.type === "delete" && pendingAction.item) {
+        if (window.confirm("Are you sure you want to delete this service?")) {
+          handleDelete(pendingAction.item);
+        }
+      }
+    } else {
+      setPasswordError("Invalid password");
+    }
+  };
+
+  // Close password modal
+  const closePasswordModal = () => {
+    setPasswordModalOpen(false);
+    setPassword("");
+    setPasswordError(null);
+    setPendingAction(null);
+  };
 
   // Modified to open edit modal with password verification
   const onEdit = (item: any) => {
-    openPasswordModal(() => {
-      prepareEdit(item);
-      setIsEditModalOpen(true);
-      closePasswordModal(); // Close modal on success
-    });
+    setPendingAction({ type: "edit", item });
+    setPasswordModalOpen(true);
+    setPassword("");
+    setPasswordError(null);
   };
 
   // Modified to require password verification for deletion
   const onDelete = (item: any) => {
-    if (!window.confirm("Are you sure you want to delete this service?")) return;
-
-    openPasswordModal(() => {
-      handleDelete(item);
-      closePasswordModal(); // Close modal on success
-    });
+    setPendingAction({ type: "delete", item });
+    setPasswordModalOpen(true);
+    setPassword("");
+    setPasswordError(null);
   };
 
   // Close modals
@@ -163,7 +211,9 @@ const Services = () => {
               </div>
             )}
             {passwordError && (
-              <div className="p-4 text-center text-red-500">{passwordError}</div>
+              <div className="p-4 text-center text-red-500">
+                {passwordError}
+              </div>
             )}
             {filteredServices.length > 0 && (
               <Table headers={headers} data={data} />
@@ -171,8 +221,56 @@ const Services = () => {
           </div>
         </div>
 
-        {/* Render Password Modal */}
-        <PasswordModal />
+        {/* Password Modal */}
+        {passwordModalOpen && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">Enter Password</h3>
+                <button
+                  onClick={closePasswordModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="mb-4 relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+                {passwordError && (
+                  <p className="text-red-500 text-sm mt-2">{passwordError}</p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={closePasswordModal}
+                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePasswordSubmit}
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Edit Modal */}
         {isEditModalOpen && (

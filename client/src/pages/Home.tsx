@@ -3,7 +3,16 @@ import { FiArrowRight } from "react-icons/fi"; // Importing an arrow icon for th
 import { useNavigate } from "react-router-dom";
 
 const Home = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate("/dashboard");
+    } else {
+      navigate("/login");
+    }
+  };
   return (
     // Added a subtle background gradient for more visual depth
     <div className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white">
@@ -33,7 +42,10 @@ const Home = () => {
           {/* --- NEW BUTTON (CALL TO ACTION) --- */}
           {/* Added a flex container to center the button */}
           <div className="flex justify-center items-center gap-4">
-            <button  onClick={()=>navigate("/login")} className="inline-flex items-center justify-center gap-2 px-8 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300">
+            <button
+              onClick={handleClick}
+              className="inline-flex items-center justify-center gap-2 px-8 py-3 font-semibold text-white bg-blue-600 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300"
+            >
               <span>Go to Dashboard</span>
               <FiArrowRight className="text-lg" />
             </button>

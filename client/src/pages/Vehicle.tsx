@@ -1,13 +1,23 @@
 import { useEffect, useState, useCallback } from "react";
 import { debounce } from "lodash";
-import { Edit, Search, Trash, X, Plus, User, Car } from "lucide-react";
+import {
+  Edit,
+  Search,
+  Trash,
+  X,
+  Plus,
+  User,
+  Car,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import Table from "../components/ui/Table";
 import Sidebar from "../components/layout/Sidebar";
 import UserActions from "../components/layout/headers/UserActions";
 import instance from "../axios/axios";
-import { usePasswordVerification } from "../hooks/usePasswordVerification";
+import type { AxiosResponse } from "axios";
 
-// Interfaces remain unchanged
+// Interfaces
 interface Customer {
   _id: string;
   name: string;
@@ -18,11 +28,18 @@ interface Vehicle {
   _id?: string;
   model: string;
   registration_number: string;
-  customerId: string | Customer;
+  customerId: string;
   customerName: string;
   serviceCount: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+interface VehicleFormData {
+  model: string;
+  registration_number: string;
+  customerId: string;
+  customerName?: string;
 }
 
 interface NewCustomer {
@@ -30,15 +47,19 @@ interface NewCustomer {
   phone: string;
 }
 
+interface ApiResponse<T> {
+  data: T | T[];
+}
+
 const Vehicles = () => {
-  // Existing state declarations (unchanged)
+  // State declarations
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [currentVehicle, setCurrentVehicle] = useState<Vehicle | null>(null);
-  const [formData, setFormData] = useState<Partial<Vehicle>>({
+  const [formData, setFormData] = useState<VehicleFormData>({
     model: "",
     registration_number: "",
     customerId: "",
@@ -55,43 +76,46 @@ const Vehicles = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<string | null>(
+    null
+  );
+  const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    type: "edit" | "delete";
+    vehicle?: Vehicle;
+    id?: string;
+  } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Initialize the password verification hook
-  const {
-    PasswordModal,
-    openPasswordModal,
-    passwordError,
-    closePasswordModal,
-  } = usePasswordVerification();
-
-  // Normalize vehicle data (unchanged)
+  // Normalize vehicle data
   const normalizeVehicle = (vehicle: any): Vehicle => ({
     ...vehicle,
-    customerName:
-      typeof vehicle.customerId === "object" && vehicle.customerId?.name
-        ? vehicle.customerId.name
-        : vehicle.customerName || "N/A",
-    customerId:
-      typeof vehicle.customerId === "object"
-        ? vehicle.customerId._id
-        : vehicle.customerId || "",
+    customerName: vehicle.customerId?.name || vehicle.customerName || "N/A",
+    customerId: vehicle.customerId?._id || vehicle.customerId || "",
   });
 
-  // Fetch vehicles (unchanged)
+  // Fetch vehicles
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
         setLoading(true);
-        const response = await instance.get("/api/vehicle");
-        const data = response.data.data || response.data;
-        const normalizedVehicles = Array.isArray(data)
-          ? data.map(normalizeVehicle)
+        const response: AxiosResponse<ApiResponse<Vehicle>> =
+          await instance.get("/api/vehicle");
+        console.log("Vehicles response:", response.data);
+        const data = Array.isArray(response.data.data)
+          ? response.data.data
           : [];
+        const normalizedVehicles = data.map(normalizeVehicle);
         setVehicles(normalizedVehicles);
         setFilteredVehicles(normalizedVehicles);
         setLoading(false);
       } catch (error: any) {
-        console.error("Error fetching vehicles:", error);
+        console.error(
+          "Error fetching vehicles:",
+          error.response?.data || error
+        );
         setError("Failed to load vehicles. Please try again.");
         setLoading(false);
       }
@@ -99,18 +123,25 @@ const Vehicles = () => {
     fetchVehicles();
   }, []);
 
-  // Fetch customers (unchanged)
+  // Fetch customers
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
         setLoadingCustomers(true);
-        const response = await instance.get("/api/customer");
-        const data = response.data.data || response.data;
-        setCustomers(Array.isArray(data) ? data : []);
-        setFilteredCustomers(Array.isArray(data) ? data : []);
+        const response: AxiosResponse<ApiResponse<Customer>> =
+          await instance.get("/api/customer");
+        console.log("Customers response:", response.data);
+        const data = Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
+        setCustomers(data);
+        setFilteredCustomers(data);
         setLoadingCustomers(false);
       } catch (error: any) {
-        console.error("Error fetching customers:", error);
+        console.error(
+          "Error fetching customers:",
+          error.response?.data || error
+        );
         setError("Failed to load customers. Please try again.");
         setLoadingCustomers(false);
       }
@@ -118,20 +149,18 @@ const Vehicles = () => {
     fetchCustomers();
   }, []);
 
-  // Debounced search handlers (unchanged)
+  // Debounced search for vehicles
   const debouncedSearch = useCallback(
     debounce((term: string) => {
       setFilteredVehicles(
         vehicles.filter((vehicle) => {
-          const model = vehicle.model ? vehicle.model.toLowerCase() : "";
-          const registration = vehicle.registration_number
-            ? vehicle.registration_number.toLowerCase()
-            : "";
+          const model = vehicle.model?.toLowerCase() || "";
+          const registration = vehicle.registration_number?.toLowerCase() || "";
           const search = term.toLowerCase();
           return model.includes(search) || registration.includes(search);
         })
       );
-    }, 300),
+    }, 300) as (term: string) => void,
     [vehicles]
   );
 
@@ -139,19 +168,18 @@ const Vehicles = () => {
     debouncedSearch(searchTerm);
   }, [searchTerm, debouncedSearch]);
 
+  // Debounced search for customers
   const debouncedCustomerSearch = useCallback(
     debounce((term: string) => {
       setFilteredCustomers(
         customers.filter((customer) => {
-          const name = customer.name ? customer.name.toLowerCase() : "";
-          const phone = customer.phone
-            ? customer.phone.replace(/[\s-+]/g, "")
-            : "";
+          const name = customer.name?.toLowerCase() || "";
+          const phone = customer.phone?.replace(/[\s-+]/g, "") || "";
           const search = term.toLowerCase();
           return name.includes(search) || phone.includes(search);
         })
       );
-    }, 300),
+    }, 300) as (term: string) => void,
     [customers]
   );
 
@@ -159,13 +187,13 @@ const Vehicles = () => {
     debouncedCustomerSearch(customerSearchTerm);
   }, [customerSearchTerm, debouncedCustomerSearch]);
 
-  // Handle input changes (unchanged)
+  // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle customer selection (unchanged)
+  // Handle customer selection
   const handleCustomerSelect = (customer: Customer) => {
     setFormData((prev) => ({
       ...prev,
@@ -177,13 +205,14 @@ const Vehicles = () => {
     setError(null);
   };
 
-  // Create customer (unchchanged)
+  // Create customer
   const createCustomer = async () => {
     try {
-      const response = await instance.post<Customer>(
+      const response: AxiosResponse<Customer> = await instance.post(
         "/api/customer",
         newCustomer
       );
+      console.log("Create customer response:", response.data);
       const newCustomerData = response.data;
       setCustomers((prev) => [...prev, newCustomerData]);
       setFilteredCustomers((prev) => [...prev, newCustomerData]);
@@ -197,12 +226,12 @@ const Vehicles = () => {
       setIsCustomerModalOpen(false);
       setError(null);
     } catch (error: any) {
-      console.error("Error creating customer:", error);
+      console.error("Error creating customer:", error.response?.data || error);
       setError("Failed to create customer. Please try again.");
     }
   };
 
-  // Handle adding a vehicle (unchanged)
+  // Handle adding a vehicle
   const handleAddVehicle = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.customerId) {
@@ -211,7 +240,11 @@ const Vehicles = () => {
     }
     try {
       const { customerName, ...apiFormData } = formData;
-      const response = await instance.post("/api/vehicle", apiFormData);
+      const response: AxiosResponse<ApiResponse<Vehicle>> = await instance.post(
+        "/api/vehicle",
+        apiFormData
+      );
+      console.log("Add vehicle response:", response.data);
       if (response.status === 201) {
         const newVehicle = normalizeVehicle(response.data.data);
         setVehicles((prev) => [...prev, newVehicle]);
@@ -229,12 +262,12 @@ const Vehicles = () => {
         setError("Failed to add vehicle.");
       }
     } catch (error: any) {
-      console.error("Error adding vehicle:", error);
+      console.error("Error adding vehicle:", error.response?.data || error);
       setError("Error adding vehicle. Please try again.");
     }
   };
 
-  // Handle editing a vehicle (unchanged)
+  // Handle editing a vehicle
   const handleEditVehicle = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentVehicle?._id || !formData.customerId) {
@@ -243,10 +276,11 @@ const Vehicles = () => {
     }
     try {
       const { customerName, ...apiFormData } = formData;
-      const response = await instance.put(
+      const response: AxiosResponse<Vehicle> = await instance.put(
         `/api/vehicle/${currentVehicle._id}`,
         apiFormData
       );
+      console.log("Edit vehicle response:", response.data);
       if (response.status === 200) {
         const updatedVehicle = normalizeVehicle(response.data);
         setVehicles((prev) =>
@@ -273,55 +307,121 @@ const Vehicles = () => {
         setError("Failed to update vehicle.");
       }
     } catch (error: any) {
-      console.error("Error updating vehicle:", error);
+      console.error("Error updating vehicle:", error.response?.data || error);
       setError("Error updating vehicle. Please try again.");
     }
   };
 
-  // Modified handleDeleteVehicle to require password verification
-  const handleDeleteVehicle = (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this vehicle?")) return;
-
-    // Open password modal and pass the delete action
-    openPasswordModal(async () => {
-      try {
-        const response = await instance.delete(`/api/vehicle/${id}`);
-        if (response.status === 200) {
-          setVehicles((prev) => prev.filter((veh) => veh._id !== id));
-          setFilteredVehicles((prev) => prev.filter((veh) => veh._id !== id));
-          setError(null);
-          closePasswordModal(); // Close modal on success
-        } else {
-          setError("Failed to delete vehicle.");
-        }
-      } catch (error: any) {
-        console.error("Error deleting vehicle:", error);
-        setError("Error deleting vehicle. Please try again.");
-      }
-    });
-  };
-
-  // Modified openEditModal to require password verification
-  const openEditModal = (vehicle: Vehicle) => {
-    openPasswordModal(() => {
-      setCurrentVehicle(vehicle);
-      setFormData({
-        model: vehicle.model,
-        registration_number: vehicle.registration_number,
-        customerId:
-          typeof vehicle.customerId === "string"
-            ? vehicle.customerId
-            : vehicle.customerId._id,
-        customerName: vehicle.customerName,
+  // Verify password via API
+  const verifyPassword = async (password: string): Promise<boolean> => {
+    try {
+      const res = await instance.post("/api/customer/verify-password", {
+        password,
       });
-      setCustomerSearchTerm(vehicle.customerName);
-      setIsEditModalOpen(true);
-      setError(null);
-      closePasswordModal(); // Close modal on success
-    });
+      return res.data.success;
+    } catch (err: any) {
+      console.error("Error verifying password:", err);
+      setPasswordError(
+        err.response?.data?.message || "Failed to verify password"
+      );
+      return false;
+    }
   };
 
-  // Table headers (unchanged)
+  // Handle password submission
+  const handlePasswordSubmit = async () => {
+    if (!password) {
+      setPasswordError("Please enter a password");
+      return;
+    }
+
+    const isValid = await verifyPassword(password);
+    if (isValid) {
+      setPasswordError(null);
+      setPasswordModalOpen(false);
+      setPassword("");
+
+      if (pendingAction?.type === "edit" && pendingAction.vehicle) {
+        setCurrentVehicle(pendingAction.vehicle);
+        setFormData({
+          model: pendingAction.vehicle.model,
+          registration_number: pendingAction.vehicle.registration_number,
+          customerId: pendingAction.vehicle.customerId,
+          customerName: pendingAction.vehicle.customerName,
+        });
+        setCustomerSearchTerm(pendingAction.vehicle.customerName);
+        setIsEditModalOpen(true);
+        setError(null);
+      } else if (pendingAction?.type === "delete" && pendingAction.id) {
+        setIsDeleteConfirmOpen(pendingAction.id);
+      }
+    } else {
+      setPasswordError("Invalid password");
+    }
+  };
+
+  // Open password modal for edit
+  const promptForEdit = (vehicle: Vehicle) => {
+    setPendingAction({ type: "edit", vehicle });
+    setPasswordModalOpen(true);
+    setPassword("");
+    setPasswordError(null);
+  };
+
+  // Open password modal for delete
+  const promptForDelete = (id: string) => {
+    setPendingAction({ type: "delete", id });
+    setPasswordModalOpen(true);
+    setPassword("");
+    setPasswordError(null);
+  };
+
+  // Handle delete vehicle
+  const handleDeleteVehicle = (id: string) => {
+    promptForDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!isDeleteConfirmOpen) return;
+
+    try {
+      const response: AxiosResponse = await instance.delete(
+        `/api/vehicle/${isDeleteConfirmOpen}`
+      );
+      console.log("Delete vehicle response:", response.data);
+      if (response.status === 200) {
+        setVehicles((prev) =>
+          prev.filter((veh) => veh._id !== isDeleteConfirmOpen)
+        );
+        setFilteredVehicles((prev) =>
+          prev.filter((veh) => veh._id !== isDeleteConfirmOpen)
+        );
+        setError(null);
+        setIsDeleteConfirmOpen(null);
+      } else {
+        setError("Failed to delete vehicle.");
+      }
+    } catch (error: any) {
+      console.error("Error deleting vehicle:", error.response?.data || error);
+      setError("Error deleting vehicle. Please try again.");
+    }
+  };
+
+  // Open edit modal
+  const openEditModal = (vehicle: Vehicle) => {
+    if (!vehicle._id) return;
+    promptForEdit(vehicle);
+  };
+
+  // Close password modal
+  const closePasswordModal = () => {
+    setPasswordModalOpen(false);
+    setPassword("");
+    setPasswordError(null);
+    setPendingAction(null);
+  };
+
+  // Table headers
   const headers = [
     "Model",
     "Registration Number",
@@ -331,7 +431,7 @@ const Vehicles = () => {
     "Actions",
   ];
 
-  // Table data (updated to use modified openEditModal and handleDeleteVehicle)
+  // Table data
   const data = filteredVehicles.map((vehicle) => [
     vehicle.model || "N/A",
     vehicle.registration_number || "N/A",
@@ -365,7 +465,7 @@ const Vehicles = () => {
         <Edit size={16} />
       </button>
       <button
-        onClick={() => vehicle._id && handleDeleteVehicle(vehicle._id)}
+        onClick={() => (vehicle._id ? handleDeleteVehicle(vehicle._id) : null)}
         className="flex items-center gap-1 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
         title="Delete Vehicle"
       >
@@ -432,8 +532,82 @@ const Vehicles = () => {
           )}
         </div>
 
-        {/* Render Password Modal */}
-        <PasswordModal />
+        {/* Password Modal */}
+        {passwordModalOpen && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">Enter Password</h3>
+                <button
+                  onClick={closePasswordModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="mb-4 relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+                {passwordError && (
+                  <p className="text-red-500 text-sm mt-2">{passwordError}</p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={closePasswordModal}
+                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePasswordSubmit}
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {isDeleteConfirmOpen && (
+          <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h3 className="text-lg font-medium mb-4">Confirm Deletion</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this vehicle?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsDeleteConfirmOpen(null)}
+                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Edit Vehicle Modal */}
         {isEditModalOpen && (
