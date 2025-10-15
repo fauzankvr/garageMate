@@ -4,5 +4,6 @@ export interface ServiceData {
   description: string;
   price: number;
   status: string;
+  isOffer: boolean;
   count:number
 }

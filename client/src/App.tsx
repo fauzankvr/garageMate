@@ -38,11 +38,13 @@ const App = () => {
         {/* Auth Routes */}
         <Route
           path="/login"
-          element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+          // element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+          element={<Login />}
         />
         <Route
           path="/signup"
-          element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
+          // element={isAuthenticated ? <Navigate to="/" replace /> : <Register />}
+          element={<Register />}
         />
 
         {/* Protected Routes */}
