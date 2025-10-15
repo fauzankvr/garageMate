@@ -284,32 +284,35 @@ const Expenses = () => {
     setSelectedCategory("all");
   };
 
-  const data = filteredExpenses.map(
-    (item: Expense) =>
-      [
-        item.category,
-        item.description || "No description",
-        `₹${item.amount.toFixed(2)}`,
-        new Date(item.date).toLocaleDateString(),
-        <div className="space-x-2" key={`actions-${item._id}`}>
-          <button
-            onClick={() => onEdit(item)}
-            className="text-blue-500 hover:underline text-sm"
-            disabled={isPasswordSubmitting || isEditLoading}
-          >
-            Edit
-          </button>
-          <span className="text-gray-400">|</span>
-          <button
-            onClick={() => onDelete(item)}
-            className="text-red-500 hover:underline text-sm"
-            disabled={isPasswordSubmitting || isEditLoading}
-          >
-            Delete
-          </button>
-        </div>,
-      ] as const
-  );
+  const data: React.ReactNode[][] = filteredExpenses.map((item: Expense) => {
+    const actionCell = (
+      <div className="space-x-2" key={`actions-${item._id}`}>
+        <button
+          onClick={() => onEdit(item)}
+          className="text-blue-500 hover:underline text-sm"
+          disabled={isPasswordSubmitting || isEditLoading}
+        >
+          Edit
+        </button>
+        <span className="text-gray-400">|</span>
+        <button
+          onClick={() => onDelete(item)}
+          className="text-red-500 hover:underline text-sm"
+          disabled={isPasswordSubmitting || isEditLoading}
+        >
+          Delete
+        </button>
+      </div>
+    );
+
+    return [
+      item.category,
+      item.description || "No description",
+      `₹${item.amount.toFixed(2)}`,
+      new Date(item.date).toLocaleDateString(),
+      actionCell,
+    ] as React.ReactNode[];
+  });
 
   // Show loading state
   if (isLoading && !initialFetchDone) {

@@ -199,40 +199,43 @@ const Warranties = () => {
     warranty.customerName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const data = filteredWarranties.map(
-    (item: Warranty) =>
-      [
-        item.packageName,
-        item.duration.toString(),
-        `₹${item.cost.toString()}`,
-        item.allowedVisits.toString(),
-        item.customerName,
-        item.numberPlate,
-        new Date(item.issuedDate).toLocaleDateString(),
-        new Date(item.lastDueDate).toLocaleDateString(),
-        <div key={`actions-${item._id}`} className="space-x-2">
-          <button
-            onClick={() => onEdit(item)}
-            className="text-blue-500 hover:underline disabled:opacity-50"
-            disabled={isEditLoading}
-            title="Edit warranty (requires password)"
-            aria-label={`Edit warranty for ${item.numberPlate}`}
-          >
-            Edit
-          </button>
-          <span className="text-gray-400">|</span>
-          <button
-            onClick={() => onDelete(item)}
-            className="text-red-500 hover:underline disabled:opacity-50"
-            disabled={isEditLoading}
-            title="Delete warranty (password required before confirmation)"
-            aria-label={`Delete warranty for ${item.numberPlate}`}
-          >
-            Delete
-          </button>
-        </div>,
-      ] as (string | number | JSX.Element)[]
-  );
+  const data: React.ReactNode[][] = filteredWarranties.map((item: Warranty) => {
+    const actionCell = (
+      <div key={`actions-${item._id}`} className="space-x-2">
+        <button
+          onClick={() => onEdit(item)}
+          className="text-blue-500 hover:underline disabled:opacity-50"
+          disabled={isEditLoading}
+          title="Edit warranty (requires password)"
+          aria-label={`Edit warranty for ${item.numberPlate}`}
+        >
+          Edit
+        </button>
+        <span className="text-gray-400">|</span>
+        <button
+          onClick={() => onDelete(item)}
+          className="text-red-500 hover:underline disabled:opacity-50"
+          disabled={isEditLoading}
+          title="Delete warranty (password required before confirmation)"
+          aria-label={`Delete warranty for ${item.numberPlate}`}
+        >
+          Delete
+        </button>
+      </div>
+    );
+
+    return [
+      item.packageName,
+      `${item.duration} months`,
+      `₹${item.cost.toFixed(2)}`,
+      item.allowedVisits.toString(),
+      item.customerName,
+      item.numberPlate,
+      new Date(item.issuedDate).toLocaleDateString(),
+      new Date(item.lastDueDate).toLocaleDateString(),
+      actionCell,
+    ];
+  });
 
   return (
     <div className="flex min-h-screen bg-gray-100">

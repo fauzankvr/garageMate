@@ -824,8 +824,7 @@ const Salaries = () => {
                       </option>
                       {employees.map((emp) => (
                         <option key={emp._id} value={emp._id}>
-                          {emp.name} - {emp.phone} (₹{emp.baseSalary}
-                          )
+                          {emp.name} - {emp.phone} (₹{emp.baseSalary})
                         </option>
                       ))}
                     </select>
@@ -926,8 +925,8 @@ const Salaries = () => {
                       Borrow History
                     </label>
                     <div className="space-y-2 mb-4">
-                      {(formData.borrowedHistory || []).length > 0 ? (
-                        formData.borrowedHistory.map((entry, index) => (
+                      {(formData.borrowedHistory ?? []).length > 0 ? (
+                        formData.borrowedHistory!.map((entry, index) => (
                           <div
                             key={`borrow-${index}`}
                             className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm border"

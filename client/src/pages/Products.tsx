@@ -205,35 +205,38 @@ const Products = () => {
     product.productName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const data = filteredProducts.map(
-    (item: Product) =>
-      [
-        item.productName,
-        item.description,
-        item.price.toString(),
-        item.stock != null ? item.stock.toString() : "0",
-        item.brand,
-        <div className="space-x-2" key={`actions-${item._id}`}>
-          <button
-            onClick={() => onEdit(item)}
-            className="text-blue-500 hover:underline"
-            title="Edit Product"
-            disabled={isPasswordSubmitting}
-          >
-            Edit
-          </button>
-          <span className="text-gray-400">|</span>
-          <button
-            onClick={() => onDelete(item)}
-            className="text-red-500 hover:underline"
-            title="Delete Product"
-            disabled={isPasswordSubmitting}
-          >
-            Delete
-          </button>
-        </div>,
-      ] as const
-  );
+  const data: React.ReactNode[][] = filteredProducts.map((item: Product) => {
+    const actionCell = (
+      <div className="space-x-2" key={`actions-${item._id}`}>
+        <button
+          onClick={() => onEdit(item)}
+          className="text-blue-500 hover:underline"
+          title="Edit Product"
+          disabled={isPasswordSubmitting}
+        >
+          Edit
+        </button>
+        <span className="text-gray-400">|</span>
+        <button
+          onClick={() => onDelete(item)}
+          className="text-red-500 hover:underline"
+          title="Delete Product"
+          disabled={isPasswordSubmitting}
+        >
+          Delete
+        </button>
+      </div>
+    );
+
+    return [
+      item.productName,
+      item.description || "No description",
+      `$${item.price.toFixed(2)}`, // Format price nicely
+      item.stock != null ? item.stock.toString() : "0",
+      item.brand || "N/A",
+      actionCell,
+    ];
+  });
 
   // Show loading state
   if (isLoading && !initialFetchDone) {
