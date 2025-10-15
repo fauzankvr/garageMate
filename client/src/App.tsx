@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // Import Toastify CSS
 
@@ -26,7 +26,7 @@ import Dashboard from "./components/dashboard/Dashboard";
 import ProtectedRoute from "./pages/Auth/Protected";
 
 const App = () => {
-  const isAuthenticated = !!localStorage.getItem("token");
+  // const isAuthenticated = !!localStorage.getItem("token");
 
   return (
     <div>
