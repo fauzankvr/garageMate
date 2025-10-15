@@ -590,7 +590,7 @@ const Expenses = () => {
                         setEditError(null);
                       }}
                       className="w-full text-sm"
-                      disabled={isEditLoading}
+                      // disabled={isEditLoading}
                     />
                   </div>
                 ))}
