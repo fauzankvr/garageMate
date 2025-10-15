@@ -1,7 +1,8 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 interface Service extends Document {
-  status: boolean;
+  // status: boolean;
+  isOffer: boolean;
   price: number;
   count: Number;
   serviceName: string;
@@ -12,7 +13,8 @@ interface Service extends Document {
 
 const ServiceSchema = new Schema<Service>(
   {
-    status: { type: Boolean, required: true, default: true },
+    // status: { type: Boolean, required: true, default: true },
+    isOffer: { type: Boolean, required: true, default: true },
     price: { type: Number, required: true },
     count: { type: Number, required: true },
     serviceName: { type: String, required: true },

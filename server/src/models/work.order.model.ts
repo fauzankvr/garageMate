@@ -30,6 +30,8 @@ interface Product {
 }
 
 interface Service {
+  _id?: Types.ObjectId;
+  isOffer?: boolean;
   warranty?: string;
   status?: boolean;
   price?: number;
