@@ -231,7 +231,7 @@ const Products = () => {
     return [
       item.productName,
       item.description || "No description",
-      `$${item.price.toFixed(2)}`, // Format price nicely
+      `${item.price.toFixed(2)}`, // Format price nicely
       item.stock != null ? item.stock.toString() : "0",
       item.brand || "N/A",
       actionCell,
