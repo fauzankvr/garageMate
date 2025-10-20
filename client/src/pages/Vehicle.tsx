@@ -492,15 +492,15 @@ const Vehicles = () => {
 
 
   // Calculate total count
-  const totalCount = workData.reduce((sum, data) => {
-    return (
-      sum +
-      data.services.reduce(
-        (serviceSum, service) => serviceSum + (service.count || 0),
-        0
-      )
-    );
-  }, 0);
+  // const totalCount = workData.reduce((sum, data) => {
+  //   return (
+  //     sum +
+  //     data.services.reduce(
+  //       (serviceSum, service) => serviceSum + (service.count || 0),
+  //       0
+  //     )
+  //   );
+  // }, 0);
 
   // Table data
   const data = filteredVehicles.map((vehicle) => [
