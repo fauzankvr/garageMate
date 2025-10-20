@@ -10,6 +10,7 @@ import {
   Car,
   Eye,
   EyeOff,
+  FileText,
 } from "lucide-react";
 import Table from "../components/ui/Table";
 import Sidebar from "../components/layout/Sidebar";
@@ -47,6 +48,21 @@ interface NewCustomer {
   phone: string;
 }
 
+interface Service {
+  _id: string;
+  serviceName: string;
+  count: number;
+  price: number;
+  status: boolean;
+  description: string;
+}
+
+interface WorkData {
+  _id: string;
+  services: Service[];
+  createdAt: string;
+}
+
 interface ApiResponse<T> {
   data: T | T[];
 }
@@ -58,7 +74,9 @@ const Vehicles = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isWorkDataModalOpen, setIsWorkDataModalOpen] = useState(false);
   const [currentVehicle, setCurrentVehicle] = useState<Vehicle | null>(null);
+  const [workData, setWorkData] = useState<WorkData[]>([]);
   const [formData, setFormData] = useState<VehicleFormData>({
     model: "",
     registration_number: "",
@@ -74,6 +92,7 @@ const Vehicles = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingWorkData, setLoadingWorkData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<string | null>(
@@ -186,6 +205,26 @@ const Vehicles = () => {
   useEffect(() => {
     debouncedCustomerSearch(customerSearchTerm);
   }, [customerSearchTerm, debouncedCustomerSearch]);
+
+  // Fetch work data
+  const fetchWorkData = async (vehicleId: string) => {
+    try {
+      setLoadingWorkData(true);
+      const response: AxiosResponse<ApiResponse<WorkData>> = await instance.get(
+        `/api/workorder/vehicle/${vehicleId}`
+      );
+      console.log("Work data response:", response.data);
+      const data = Array.isArray(response.data.data) ? response.data.data : [];
+      setWorkData(data);
+      setIsWorkDataModalOpen(true);
+      setLoadingWorkData(false);
+      setError(null);
+    } catch (error: any) {
+      console.error("Error fetching work data:", error.response?.data || error);
+      setError("Failed to load work data. Please try again.");
+      setLoadingWorkData(false);
+    }
+  };
 
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -381,6 +420,11 @@ const Vehicles = () => {
     promptForDelete(id);
   };
 
+  // Handle view work data
+  const handleViewWorkData = (id: string) => {
+    fetchWorkData(id);
+  };
+
   const confirmDelete = async () => {
     if (!isDeleteConfirmOpen) return;
 
@@ -431,6 +475,33 @@ const Vehicles = () => {
     "Actions",
   ];
 
+  // Work data table headers
+  const workDataHeaders = ["#", "Service Name", "Description", "Price", "Date"];
+
+  // Work data table data
+ const groupedWorkData = workData.map((data) => ({
+   id: data._id,
+   rows: data.services.map((service, serviceIndex) => [
+     serviceIndex + 1,
+     service.serviceName || "N/A",
+     service.description || "N/A",
+     service.price ? `$${service.price.toFixed(2)}` : "N/A",
+     new Date(data.createdAt).toLocaleDateString() || "N/A",
+   ]),
+ }));
+
+
+  // Calculate total count
+  const totalCount = workData.reduce((sum, data) => {
+    return (
+      sum +
+      data.services.reduce(
+        (serviceSum, service) => serviceSum + (service.count || 0),
+        0
+      )
+    );
+  }, 0);
+
   // Table data
   const data = filteredVehicles.map((vehicle) => [
     vehicle.model || "N/A",
@@ -457,6 +528,13 @@ const Vehicles = () => {
       {vehicle.updatedAt ? "Active" : "Inactive"}
     </span>,
     <div className="flex gap-2" key={`actions-${vehicle._id}`}>
+      <button
+        onClick={() => (vehicle._id ? handleViewWorkData(vehicle._id) : null)}
+        className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+        title="View Work Data"
+      >
+        <FileText size={16} />
+      </button>
       <button
         onClick={() => openEditModal(vehicle)}
         className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -577,6 +655,63 @@ const Vehicles = () => {
                   className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Work Data Modal */}
+        {isWorkDataModalOpen && (
+          <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium flex items-center">
+                  <FileText size={20} className="mr-2" />
+                  Vehicle Work Data
+                </h3>
+                <button
+                  onClick={() => setIsWorkDataModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              {loadingWorkData && (
+                <div className="p-4 text-center text-gray-500">
+                  Loading work data...
+                </div>
+              )}
+              {error && (
+                <div className="p-4 text-center text-red-500">{error}</div>
+              )}
+              {!loadingWorkData && !error && workData.length === 0 && (
+                <div className="p-4 text-center text-gray-500">
+                  No work data found for this vehicle.
+                </div>
+              )}
+              {!loadingWorkData && !error && workData.length > 0 && (
+                <div className="space-y-4">
+                  {groupedWorkData.map((work) => (
+                    <div key={work.id} className="mb-6">
+                      <h3 className="font-semibold text-gray-700 mb-2">
+                        Work Order: {work.id}
+                      </h3>
+                      <Table headers={workDataHeaders} data={work.rows} />
+                    </div>
+                  ))}
+
+                  {/* <div className="flex justify-end text-sm font-medium text-gray-700">
+                    Total Count: {totalCount}
+                  </div> */}
+                </div>
+              )}
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setIsWorkDataModalOpen(false)}
+                  className="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
+                >
+                  Close
                 </button>
               </div>
             </div>

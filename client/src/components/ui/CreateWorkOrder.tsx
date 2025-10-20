@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Search, X, Plus, User, Car } from "lucide-react";
 import instance from "../../axios/axios";
 
-// Type definitions
+// Type definitions remain unchanged
 export interface Customer {
   _id: string;
   phone: string;
-  name?: string; // Made name optional
+  name?: string;
   email?: string;
 }
 
@@ -47,7 +47,7 @@ export interface ServiceCharge {
 }
 
 export interface NewCustomer {
-  name?: string; // Made name optional
+  name?: string;
   phone: string;
   email?: string;
 }
@@ -103,9 +103,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     upiAmount: 0,
   });
   const [notes, setNotes] = useState<string>("");
-  const [discount, setDiscount] = useState<string>("")
+  const [discount, setDiscount] = useState<string>("");
   const [createdAt, setCreatedAt] = useState<string>(
-    new Date().toISOString().split("T")[0] // Initialize with today's date
+    new Date().toISOString().split("T")[0]
   );
   const [updatedAt, setUpdatedAt] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -136,20 +136,21 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     registration_number: "",
   });
 
+  // Track whether services have been modified
+  const [servicesModified, setServicesModified] = useState<boolean>(false);
+
   // Fetch services and products on component mount
   useEffect(() => {
     fetchServices();
     fetchProducts();
-    if (isEdit && workOrder) {
+    if (isEdit && workOrder && !servicesModified) {
       const loadData = async () => {
         try {
-          // Fetch customer
           const customerResponse = await instance.get<Customer>(
             `/api/customer/${workOrder.customerId}`
           );
           setSelectedCustomer(customerResponse.data);
 
-          // Fetch vehicle if present
           if (workOrder.vehicleId) {
             const vehicleResponse = await instance.get<{ data: Vehicle }>(
               `/api/vehicle/${workOrder.vehicleId}`
@@ -158,10 +159,18 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             fetchVehiclesByCustomerId(workOrder.customerId);
           }
 
-          // Fetch services
-          setSelectedServices(workOrder.services || []);
+          if (!servicesModified) {
+            console.log(
+              "Loading services from work order:",
+              workOrder.services
+            );
+            setSelectedServices(
+              workOrder.services?.filter((s) => !s._id.startsWith("temp-")) ||
+                []
+            );
+            setServiceCharges(workOrder.serviceCharges || []);
+          }
 
-          // Fetch products
           const productResponses = await Promise.all(
             (workOrder.products || []).map((product) =>
               instance.get<Product>(`/api/product/${product.productId}`)
@@ -174,15 +183,12 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             }))
           );
 
-          // Set service charges and payment details
-          setServiceCharges(workOrder.serviceCharges || []);
           setPaymentDetails({
             method: workOrder.paymentDetails?.method || "cash",
             cashAmount: workOrder.paymentDetails?.cashAmount ?? 0,
             upiAmount: workOrder.paymentDetails?.upiAmount ?? 0,
           });
 
-          // Set notes, discounted, createdAt, and updatedAt
           setNotes(workOrder.notes || "");
           setDiscount(workOrder.discount || "");
           setCreatedAt(workOrder.createdAt?.split("T")[0] || "");
@@ -194,7 +200,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       };
       loadData();
     }
-  }, [isEdit, workOrder]);
+  }, [isEdit, workOrder, servicesModified]);
 
   // API calls
   const searchCustomerByPhone = async (phone: string): Promise<void> => {
@@ -334,20 +340,33 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       }
     }
 
-    // Map serviceCharges to Service objects for compatibility
-    const mappedServiceCharges: Service[] = validServiceCharges.map(
-      (charge) => ({
-        _id: `temp-${Date.now()}-${Math.random()}`,
-        warranty: "N/A",
-        status: true,
-        price: charge.price || 0,
-        count: 1,
-        serviceName: charge.for || "",
-        description: charge.description || "",
-      })
-    );
+    // // Map serviceCharges to Service objects
+    // const mappedServiceCharges: Service[] = validServiceCharges.map(
+    //   (charge) => {
+    //     const service: Service = {
+    //       _id: `temp-${Date.now()}-${Math.random()}`,
+    //       warranty: "N/A",
+    //       status: true,
+    //       price: charge.price || 0,
+    //       count: 1,
+    //       serviceName: charge.for || "",
+    //       description: charge.description || "",
+    //     };
+    //     console.log("Mapped service charge:", service);
+    //     return service;
+    //   }
+    // );
 
-    const services: Service[] = [...selectedServices, ...mappedServiceCharges];
+    console.log("Selected services:", selectedServices);
+    console.log("Valid service charges:", validServiceCharges);
+    const services: Service[] = [...selectedServices];
+
+    // Validate services array
+    if (services.some((s) => !s._id || !s.serviceName)) {
+      console.warn("Invalid services detected:", services);
+      alert("Invalid services detected. Please check your selections.");
+      return;
+    }
 
     const products: ProductItem[] = selectedProducts.map((product) => ({
       productId: product._id,
@@ -378,6 +397,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
 
     setIsLoading(true);
     try {
+      console.log("Work order data sent:", workOrderData);
       let response;
       if (isEdit && workOrder?._id) {
         response = await instance.put<WorkOrder>(
@@ -390,7 +410,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
           workOrderData
         );
       }
-      console.log("Work order saved:", response.data);
+      console.log("Backend response:", response.data);
       alert(`Work Order ${isEdit ? "updated" : "created"} successfully!`);
       onSave();
       resetForm();
@@ -419,6 +439,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     setDiscount("");
     setCreatedAt(new Date().toISOString().split("T")[0]);
     setUpdatedAt("");
+    setServicesModified(false);
     setIsLoading(false);
   };
 
@@ -437,11 +458,25 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   const handleServiceSelect = (service: Service): void => {
     if (!selectedServices.find((s) => s._id === service._id)) {
       setSelectedServices([...selectedServices, service]);
+      setServicesModified(true);
     }
   };
 
   const removeService = (serviceId: string): void => {
-    setSelectedServices(selectedServices.filter((s) => s._id !== serviceId));
+    console.log("Removing service:", serviceId);
+    console.log("Current selectedServices:", selectedServices);
+    console.log("Current serviceCharges:", serviceCharges);
+    const updatedServices = selectedServices.filter((s) => s._id !== serviceId);
+    const updatedServiceCharges = serviceCharges.filter(
+      (charge) =>
+        charge.for !== serviceId &&
+        !selectedServices.some((s) => s._id === charge.for)
+    );
+    console.log("Updated selectedServices:", updatedServices);
+    console.log("Updated serviceCharges:", updatedServiceCharges);
+    setSelectedServices(updatedServices);
+    setServiceCharges(updatedServiceCharges);
+    setServicesModified(true);
   };
 
   const addServiceCharge = (): void => {
@@ -449,6 +484,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       ...serviceCharges,
       { description: "", price: 0, for: "" },
     ]);
+    setServicesModified(true);
   };
 
   const updateServiceCharge = (
@@ -460,10 +496,15 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       i === index ? { ...charge, [field]: value } : charge
     );
     setServiceCharges(updated);
+    console.log("Updated service charges:", updated);
+    setServicesModified(true);
   };
 
   const removeServiceCharge = (index: number): void => {
-    setServiceCharges(serviceCharges.filter((_, i) => i !== index));
+    const updated = serviceCharges.filter((_, i) => i !== index);
+    setServiceCharges(updated);
+    console.log("Updated service charges:", updated);
+    setServicesModified(true);
   };
 
   const addProduct = (product: Product, quantity: number): void => {
@@ -536,7 +577,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             Customer & Vehicle Info
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Customer Section */}
             <div>
               {selectedCustomer ? (
                 <div className="bg-white p-3 rounded border relative">
@@ -616,7 +656,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
               )}
             </div>
 
-            {/* Vehicle Section */}
             <div>
               {selectedVehicle ? (
                 <div className="bg-white p-3 rounded border relative">
@@ -785,15 +824,20 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                   }
                   className="w-20 px-3 py-2 border rounded-lg text-sm"
                 />
-                <input
-                  type="text"
-                  placeholder="For"
+                <select
                   value={charge.for || ""}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     updateServiceCharge(index, "for", e.target.value)
                   }
                   className="w-24 px-3 py-2 border rounded-lg text-sm"
-                />
+                >
+                  <option value="">Custom</option>
+                  {selectedServices.map((service) => (
+                    <option key={service._id} value={service._id}>
+                      {service.serviceName}
+                    </option>
+                  ))}
+                </select>
                 <button
                   onClick={() => removeServiceCharge(index)}
                   className="px-2 py-2 text-red-500 hover:text-red-700"
