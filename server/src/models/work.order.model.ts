@@ -86,6 +86,8 @@ const WorkOrderSchema = new Schema<WorkOrder>(
     vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
     services: [
       {
+        _id: { type: Schema.Types.ObjectId, auto: true }, 
+        isOffer: { type: Boolean }, 
         warranty: { type: String },
         status: { type: Boolean, default: true },
         price: { type: Number },

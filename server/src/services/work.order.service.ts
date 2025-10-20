@@ -1,4 +1,4 @@
-import { Model, Types } from "mongoose";
+import mongoose, { Model, Types } from "mongoose";
 import { WorkOrder, WorkOrderModel } from "../models/work.order.model";
 import { Filter } from "./dashboard.service";
 import { CounterModel } from "../models/counter.model";
@@ -187,6 +187,48 @@ class WorkOrderService {
         throw new Error(`Failed to delete work order: ${error.message}`);
       } else {
         throw new Error(`Failed to delete work order: ${String(error)}`);
+      }
+    }
+  }
+
+  async findByVehicleId(vehicleId: string) {
+    try {
+      // // Validate vehicleId
+      // if (!mongoose.isValidObjectId(vehicleId)) {
+      //   throw new Error("Invalid vehicleId");
+      // }
+    const objectId = new mongoose.Types.ObjectId(vehicleId);
+      // Query work orders by vehicleId and populate services where isOffer: true
+      const workOrders = await this.workOrderModel
+        .find({
+          vehicleId: objectId,
+          services: {
+            $elemMatch: {
+              $or: [{ isOffer: true }, { count: 10 }],
+            },
+          },
+        })
+        .select("createdAt services")
+        .lean()
+        .exec();
+
+
+
+      // Filter out work orders with no matching services
+      const filteredWorkOrders = workOrders.filter(
+        (workOrder) => workOrder.services && workOrder.services.length > 0
+      );
+
+      if (!filteredWorkOrders || filteredWorkOrders.length === 0) {
+        return [];
+      }
+
+      return filteredWorkOrders;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to fetch work orders: ${error.message}`);
+      } else {
+        throw new Error(`Failed to fetch work orders: ${String(error)}`);
       }
     }
   }

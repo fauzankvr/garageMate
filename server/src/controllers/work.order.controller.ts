@@ -31,11 +31,7 @@ class WorkOrderController {
             } else if (service && typeof service === "object" && service._id) {
               // If service is an object with _id property
               serviceId = service._id.toString();
-            } else if (
-              service &&
-              typeof service === "object" &&
-              service._id
-            ) {
+            } else if (service && typeof service === "object" && service._id) {
               // If service has a serviceId property
               serviceId = service._id.toString();
             } else {
@@ -254,6 +250,23 @@ class WorkOrderController {
       res.status(500).json({
         success: false,
         message: "Failed to delete work order",
+      });
+    }
+  }
+
+  async getByVehicleId(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id
+      const workOrders = await workOrderService.findByVehicleId(id);
+      res.status(200).json({
+        success: true,
+        data: workOrders,
+      });
+    } catch (error) {
+      console.error("Error fetching work orders:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch work orders",
       });
     }
   }
