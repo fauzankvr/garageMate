@@ -320,15 +320,15 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     }
 
     // Validate serviceCharges
-    const validServiceCharges = serviceCharges.filter(
-      (charge) => charge.description && charge.price && charge.for
-    );
-    if (serviceCharges.length > 0 && validServiceCharges.length === 0) {
-      alert(
-        "Please fill in all service charge fields or remove empty charges."
-      );
-      return;
-    }
+    // const validServiceCharges = serviceCharges.filter(
+    //   (charge) => charge.description && charge.price && charge.for
+    // );
+    // if (serviceCharges.length > 0 && validServiceCharges.length === 0) {
+    //   alert(
+    //     "Please fill in all service charge fields or remove empty charges."
+    //   );
+    //   return;
+    // }
 
     // Validate payment details
     if (paymentDetails.method === "both") {
@@ -357,8 +357,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     //   }
     // );
 
-    console.log("Selected services:", selectedServices);
-    console.log("Valid service charges:", validServiceCharges);
+  
     const services: Service[] = [...selectedServices];
 
     // Validate services array
@@ -379,7 +378,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       vehicleId: selectedVehicle?._id,
       services,
       products,
-      serviceCharges: validServiceCharges,
+      serviceCharges: serviceCharges,
       totalServiceCharge: calculateServiceTotal(),
       totalProductCost: calculateProductTotal(),
       totalAmount: calculateGrandTotal(),
