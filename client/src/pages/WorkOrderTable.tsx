@@ -481,7 +481,7 @@ const [showPassword,setShowPassword] = useState(false)
     doc.text("Notes:", 14, finalY + 35);
     doc.text(
       workOrder.notes ||
-        "Thank you for choosing OZON Detailing & Car Wash. Please settle the invoice within 7 days.",
+        "Thank you for choosing OZON Detailing & Car Wash.",
       14,
       finalY + 40,
       { maxWidth: 180 }

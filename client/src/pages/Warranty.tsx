@@ -304,8 +304,8 @@ const Warranties = () => {
       item.allowedVisits.toString(),
       item.customerName,
       item.numberPlate,
-      new Date(item.issuedDate).toLocaleDateString(),
-      new Date(item.lastDueDate).toLocaleDateString(),
+      new Date(item.issuedDate).toLocaleDateString("en-GB"),
+      new Date(item.lastDueDate).toLocaleDateString("en-GB"),
       actionCell,
     ];
   });

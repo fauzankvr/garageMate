@@ -41,6 +41,7 @@ interface VehicleFormData {
   registration_number: string;
   customerId: string;
   customerName?: string;
+  serviceCount?: number; // Added
 }
 
 interface NewCustomer {
@@ -82,6 +83,7 @@ const Vehicles = () => {
     registration_number: "",
     customerId: "",
     customerName: "",
+    serviceCount: 0,
   });
   const [newCustomer, setNewCustomer] = useState<NewCustomer>({
     name: "",
@@ -113,6 +115,7 @@ const Vehicles = () => {
     ...vehicle,
     customerName: vehicle.customerId?.name || vehicle.customerName || "N/A",
     customerId: vehicle.customerId?._id || vehicle.customerId || "",
+    serviceCount: vehicle.serviceCount ?? 0,
   });
 
   // Fetch vehicles
@@ -122,7 +125,6 @@ const Vehicles = () => {
         setLoading(true);
         const response: AxiosResponse<ApiResponse<Vehicle>> =
           await instance.get("/api/vehicle");
-        console.log("Vehicles response:", response.data);
         const data = Array.isArray(response.data.data)
           ? response.data.data
           : [];
@@ -149,7 +151,6 @@ const Vehicles = () => {
         setLoadingCustomers(true);
         const response: AxiosResponse<ApiResponse<Customer>> =
           await instance.get("/api/customer");
-        console.log("Customers response:", response.data);
         const data = Array.isArray(response.data.data)
           ? response.data.data
           : [];
@@ -213,7 +214,6 @@ const Vehicles = () => {
       const response: AxiosResponse<ApiResponse<WorkData>> = await instance.get(
         `/api/workorder/vehicle/${vehicleId}`
       );
-      console.log("Work data response:", response.data);
       const data = Array.isArray(response.data.data) ? response.data.data : [];
       setWorkData(data);
       setIsWorkDataModalOpen(true);
@@ -229,7 +229,10 @@ const Vehicles = () => {
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "serviceCount" ? parseInt(value) || 0 : value,
+    }));
   };
 
   // Handle customer selection
@@ -251,7 +254,6 @@ const Vehicles = () => {
         "/api/customer",
         newCustomer
       );
-      console.log("Create customer response:", response.data);
       const newCustomerData = response.data;
       setCustomers((prev) => [...prev, newCustomerData]);
       setFilteredCustomers((prev) => [...prev, newCustomerData]);
@@ -283,7 +285,6 @@ const Vehicles = () => {
         "/api/vehicle",
         apiFormData
       );
-      console.log("Add vehicle response:", response.data);
       if (response.status === 201) {
         const newVehicle = normalizeVehicle(response.data.data);
         setVehicles((prev) => [...prev, newVehicle]);
@@ -293,6 +294,7 @@ const Vehicles = () => {
           registration_number: "",
           customerId: "",
           customerName: "",
+          serviceCount: 0,
         });
         setCustomerSearchTerm("");
         setIsAddModalOpen(false);
@@ -315,11 +317,10 @@ const Vehicles = () => {
     }
     try {
       const { customerName, ...apiFormData } = formData;
-      const response: AxiosResponse<Vehicle> = await instance.put(
+      const response: AxiosResponse<Vehicle> = await instance.patch(
         `/api/vehicle/${currentVehicle._id}`,
         apiFormData
       );
-      console.log("Edit vehicle response:", response.data);
       if (response.status === 200) {
         const updatedVehicle = normalizeVehicle(response.data);
         setVehicles((prev) =>
@@ -337,6 +338,7 @@ const Vehicles = () => {
           registration_number: "",
           customerId: "",
           customerName: "",
+          serviceCount: 0,
         });
         setCustomerSearchTerm("");
         setCurrentVehicle(null);
@@ -387,6 +389,7 @@ const Vehicles = () => {
           registration_number: pendingAction.vehicle.registration_number,
           customerId: pendingAction.vehicle.customerId,
           customerName: pendingAction.vehicle.customerName,
+          serviceCount: pendingAction.vehicle.serviceCount ?? 0,
         });
         setCustomerSearchTerm(pendingAction.vehicle.customerName);
         setIsEditModalOpen(true);
@@ -432,7 +435,6 @@ const Vehicles = () => {
       const response: AxiosResponse = await instance.delete(
         `/api/vehicle/${isDeleteConfirmOpen}`
       );
-      console.log("Delete vehicle response:", response.data);
       if (response.status === 200) {
         setVehicles((prev) =>
           prev.filter((veh) => veh._id !== isDeleteConfirmOpen)
@@ -479,28 +481,16 @@ const Vehicles = () => {
   const workDataHeaders = ["#", "Service Name", "Description", "Price", "Date"];
 
   // Work data table data
- const groupedWorkData = workData.map((data) => ({
-   id: data._id,
-   rows: data.services.map((service, serviceIndex) => [
-     serviceIndex + 1,
-     service.serviceName || "N/A",
-     service.description || "N/A",
-     service.price ? `$${service.price.toFixed(2)}` : "N/A",
-     new Date(data.createdAt).toLocaleDateString() || "N/A",
-   ]),
- }));
-
-
-  // Calculate total count
-  // const totalCount = workData.reduce((sum, data) => {
-  //   return (
-  //     sum +
-  //     data.services.reduce(
-  //       (serviceSum, service) => serviceSum + (service.count || 0),
-  //       0
-  //     )
-  //   );
-  // }, 0);
+  const groupedWorkData = workData.map((data) => ({
+    id: data._id,
+    rows: data.services.map((service, serviceIndex) => [
+      serviceIndex + 1,
+      service.serviceName || "N/A",
+      service.description || "N/A",
+      service.price ? `$${service.price.toFixed(2)}` : "N/A",
+      new Date(data.createdAt).toLocaleDateString() || "N/A",
+    ]),
+  }));
 
   // Table data
   const data = filteredVehicles.map((vehicle) => [
@@ -700,10 +690,6 @@ const Vehicles = () => {
                       <Table headers={workDataHeaders} data={work.rows} />
                     </div>
                   ))}
-
-                  {/* <div className="flex justify-end text-sm font-medium text-gray-700">
-                    Total Count: {totalCount}
-                  </div> */}
                 </div>
               )}
               <div className="flex justify-end mt-4">
@@ -791,6 +777,20 @@ const Vehicles = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Service Count
+                  </label>
+                  <input
+                    type="number"
+                    name="serviceCount"
+                    min="0"
+                    value={formData.serviceCount ?? ""}
+                    onChange={handleInputChange}
+                    className="w-full p-2 bg-gray-50 border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
                     Customer
                   </label>
                   <div className="relative">
@@ -828,6 +828,7 @@ const Vehicles = () => {
                     </div>
                   )}
                   <button
+                    type="button"
                     onClick={() => setIsCustomerModalOpen(true)}
                     className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center"
                   >
@@ -835,7 +836,7 @@ const Vehicles = () => {
                     Create New Customer
                   </button>
                 </div>
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end space-x-φ2">
                   <button
                     type="button"
                     onClick={() => setIsEditModalOpen(false)}
@@ -902,6 +903,20 @@ const Vehicles = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Service Count
+                  </label>
+                  <input
+                    type="number"
+                    name="serviceCount"
+                    min="0"
+                    value={formData.serviceCount ?? ""}
+                    onChange={handleInputChange}
+                    className="w-full p-2 bg-gray-50 border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
                     Customer
                   </label>
                   <div className="relative">
@@ -939,6 +954,7 @@ const Vehicles = () => {
                     </div>
                   )}
                   <button
+                    type="button"
                     onClick={() => setIsCustomerModalOpen(true)}
                     className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center"
                   >
