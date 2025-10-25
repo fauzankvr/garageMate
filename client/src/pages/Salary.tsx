@@ -584,9 +584,11 @@ const Salaries = () => {
   ];
 
   // Filter salaries based on search query
-  const filteredSalaries = salaries.filter((salary) =>
+ const filteredSalaries = salaries.filter(
+  (salary) =>
+    salary.employee?.name && // Must exist and have a name
     salary.employee.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+);
 
   // Table data
   const data = filteredSalaries.map((salary) => [

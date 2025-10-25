@@ -309,7 +309,11 @@ const Expenses = () => {
       item.category,
       item.description || "No description",
       `₹${item.amount.toFixed(2)}`,
-      new Date(item.date).toLocaleDateString(),
+      new Date(item.date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }),
       actionCell,
     ] as React.ReactNode[];
   });
