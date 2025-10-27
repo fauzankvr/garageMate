@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, X, Plus, User, Car } from "lucide-react";
 import instance from "../../axios/axios";
+import type { AxiosResponse } from "axios";
 
 // Type definitions remain unchanged
 export interface Customer {
@@ -16,6 +17,14 @@ export interface Vehicle {
   registration_number: string;
   serviceCount: number;
   customerId: string;
+}
+
+export interface VehicleRes {
+  _id: string;
+  model: string;
+  registration_number: string;
+  serviceCount: number;
+  customerId: Customer;
 }
 
 export interface Service {
@@ -139,6 +148,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
   // Track whether services have been modified
   const [servicesModified, setServicesModified] = useState<boolean>(false);
 
+  // Add these states near other search states
+  const [vehicleSearch, setVehicleSearch] = useState<string>("");
+  const [searchedVehicles, setSearchedVehicles] = useState<VehicleRes[]>([]);
+  const [loadingVehicleSearch, setLoadingVehicleSearch] = useState<boolean>(false);
+
   // Fetch services and products on component mount
   useEffect(() => {
     fetchServices();
@@ -166,7 +180,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             );
             setSelectedServices(
               workOrder.services?.filter((s) => !s._id.startsWith("temp-")) ||
-                []
+              []
             );
             setServiceCharges(workOrder.serviceCharges || []);
           }
@@ -201,6 +215,13 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       loadData();
     }
   }, [isEdit, workOrder, servicesModified]);
+
+  useEffect(() => {
+    if (selectedCustomer) {
+      setVehicleSearch("");
+      setSearchedVehicles([]);
+    }
+  }, [selectedCustomer]);
 
   // API calls
   const searchCustomerByPhone = async (phone: string): Promise<void> => {
@@ -261,6 +282,31 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     }
   };
 
+  const searchVehicle = async (query: string): Promise<void> => {
+    if (query.length < 4) {
+      setSearchedVehicles([]);
+      return;
+    }
+    setLoadingVehicleSearch(true);
+    try {
+      const response: AxiosResponse<{ data: VehicleRes[] }> = await instance.get<{ data: VehicleRes[] }>("/api/vehicle/search", {
+        params: {
+          registration_number: query,
+        },
+      });
+
+      if (response.data?.data.length) {
+        setSearchedVehicles(response.data?.data);
+      }
+    } catch (error: any) {
+      console.error("Error searching vehicles:", error);
+      setSearchedVehicles([]);
+      alert(`Error searching vehicles: ${error.message}`);
+    } finally {
+      setLoadingVehicleSearch(false);
+    }
+  };
+
   const createCustomer = async (): Promise<void> => {
     if (!newCustomer.phone) {
       alert("Phone number is required.");
@@ -305,6 +351,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       alert(`Error creating vehicle: ${error.message}`);
     }
   };
+
+
 
   // Calculate discount amount
   const calculateDiscountAmount = (): number => {
@@ -357,7 +405,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     //   }
     // );
 
-  
+
     const services: Service[] = [...selectedServices];
 
     // Validate services array
@@ -416,8 +464,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     } catch (error: any) {
       console.error("Error saving work order:", error);
       alert(
-        `Error saving work order: ${
-          error.response?.data?.message || error.message
+        `Error saving work order: ${error.response?.data?.message || error.message
         }`
       );
     } finally {
@@ -440,6 +487,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     setUpdatedAt("");
     setServicesModified(false);
     setIsLoading(false);
+    setVehicleSearch("");
+    setSearchedVehicles([]);
   };
 
   // Event handlers
@@ -450,7 +499,17 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     fetchVehiclesByCustomerId(customer._id);
   };
 
-  const handleVehicleSelect = (vehicle: Vehicle): void => {
+  const handleVehicleSelect = (vehicle: VehicleRes): void => {
+    setSelectedVehicle({
+      _id: vehicle._id,
+      model: vehicle.model,
+      customerId: vehicle.customerId._id,
+      registration_number: vehicle.registration_number,
+      serviceCount: vehicle.serviceCount,
+    });
+    setSelectedCustomer(vehicle.customerId);
+  };
+   const handleVehicleSelect1 = (vehicle: Vehicle): void => {
     setSelectedVehicle(vehicle);
   };
 
@@ -671,11 +730,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                     <div>Reg No: {selectedVehicle.registration_number}</div>
                     <div className="mt-2">
                       <span
-                        className={`inline-block text-sm font-medium ${
-                          selectedVehicle.serviceCount === 10
+                        className={`inline-block text-sm font-medium ${selectedVehicle.serviceCount === 10
                             ? "bg-green-100 text-green-700 rounded-full px-3 py-1"
                             : "text-gray-700"
-                        }`}
+                          }`}
                       >
                         Service Count:{" "}
                         {selectedVehicle.serviceCount === 10
@@ -690,21 +748,16 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                   <div className="text-sm font-medium text-gray-700 mb-2">
                     Select Vehicle (Optional)
                   </div>
+
                   {selectedCustomer ? (
                     <div>
                       {loadingVehicles ? (
-                        <div className="text-sm text-gray-500">
-                          Loading vehicles...
-                        </div>
+                        <div className="text-sm text-gray-500">Loading vehicles...</div>
                       ) : vehicles.length > 0 ? (
                         <select
-                          onChange={(
-                            e: React.ChangeEvent<HTMLSelectElement>
-                          ) => {
-                            const vehicle = vehicles.find(
-                              (v) => v._id === e.target.value
-                            );
-                            if (vehicle) handleVehicleSelect(vehicle);
+                          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                            const vehicle = vehicles.find((v) => v._id === e.target.value);
+                            if (vehicle) handleVehicleSelect1(vehicle);
                           }}
                           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                           defaultValue=""
@@ -717,9 +770,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                           ))}
                         </select>
                       ) : (
-                        <div className="text-sm text-gray-500">
-                          No vehicles found
-                        </div>
+                        <div className="text-sm text-gray-500">No vehicles found</div>
                       )}
 
                       <button
@@ -731,8 +782,58 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                       </button>
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500 italic">
-                      Please select a customer first
+                    <div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search vehicle by model or reg no..."
+                          value={vehicleSearch}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            const value = e.target.value;
+                            setVehicleSearch(value);
+                            searchVehicle(value);
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        />
+                        <Search className="absolute right-3 top-2.5 text-gray-400" size={16} />
+                      </div>
+
+                      {loadingVehicleSearch && (
+                        <div className="text-sm text-gray-500 mt-2">Searching vehicles...</div>
+                      )}
+
+                      {searchedVehicles.length > 0 && (
+                        <div className="mt-2 bg-white border rounded-lg shadow-sm max-h-40 overflow-y-auto">
+                          {searchedVehicles.map((vehicle) => (
+                            <div
+                              key={vehicle._id}
+                              onClick={() => {
+                                handleVehicleSelect(vehicle);
+                                setVehicleSearch("");
+                                setSearchedVehicles([]);
+                              }}
+                              className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 text-sm"
+                            >
+                              <div className="font-medium">{vehicle.model}</div>
+                              <div className="text-xs text-gray-600">
+                                {vehicle.registration_number} | Customer: {vehicle.customerId.name || "N/A"}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {vehicleSearch.length >= 4 && searchedVehicles.length === 0 && !loadingVehicleSearch && (
+                        <div className="text-sm text-gray-500 mt-2">No vehicles found</div>
+                      )}
+
+                      <button
+                        onClick={() => setShowVehicleModal(true)}
+                        className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                      >
+                        <Plus size={16} className="mr-1" />
+                        Add New Vehicle
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1143,10 +1244,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             onClick={createOrUpdateWorkOrder}
             disabled={!selectedCustomer || isLoading}
             className={`w-full py-3 rounded-lg flex items-center justify-center
-              ${
-                isLoading
-                  ? "bg-blue-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
+              ${isLoading
+                ? "bg-blue-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
               } 
               text-white disabled:bg-gray-300 disabled:cursor-not-allowed`}
           >
@@ -1175,8 +1275,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
             {isLoading
               ? "Processing..."
               : isEdit
-              ? "Update Old Bill"
-              : "Create New Bill"}
+                ? "Update Old Bill"
+                : "Create New Bill"}
           </button>
         </div>
       </div>

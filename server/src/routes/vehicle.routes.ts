@@ -5,9 +5,9 @@ const router = express.Router();
 
 router.post("/", vehicleController.create);
 router.get("/", vehicleController.getAll);
-router.get("/:id", vehicleController.getById);
 router.get("/customer/:costumerId", vehicleController.getByCustomerId);
 router.get("/search", vehicleController.search);
+router.get("/:id", vehicleController.getById);
 router.delete("/:id", vehicleController.delete);
 router.patch("/:id", vehicleController.update);
 

@@ -65,7 +65,7 @@ class VehicleService {
           $options: "i",
         };
       }
-      return await this.vehicleModel.find(filter).exec();
+      return await this.vehicleModel.find(filter).populate("customerId").exec();
     } catch (error) {
       throw new Error(`Failed to search vehicles: ${error}`);
     }

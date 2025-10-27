@@ -25,6 +25,7 @@ class VehicleController {
   async getById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      console.log("Fetching vehicle with ID:", id);
       const vehicles = await vehicleService.findById(id?.toString());
       res.status(200).json({
         success: true,
@@ -85,7 +86,9 @@ class VehicleController {
   // Search vehicles
   async search(req: Request, res: Response): Promise<void> {
     try {
+      console.log("Search request received");
       const { model, registration_number } = req.query;
+      console.log("Search query params:", req.query);
       if (model && typeof model !== "string") {
         res
           .status(400)
