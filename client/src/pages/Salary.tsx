@@ -214,7 +214,7 @@ const Salaries = () => {
                 } catch (error: any) {
                   setEditError(
                     error.response?.data?.message ||
-                      "Error deleting salary. Please try again."
+                    "Error deleting salary. Please try again."
                   );
                 }
               }
@@ -267,7 +267,7 @@ const Salaries = () => {
               } catch (error: any) {
                 setEditError(
                   error.response?.data?.message ||
-                    "Error updating salary. Please try again."
+                  "Error updating salary. Please try again."
                 );
               }
             }
@@ -315,8 +315,9 @@ const Salaries = () => {
 
   // Find the most recent salary record for an employee
   const getPreviousSalary = (employeeId: string): Salary | null => {
+    console.log(salaries);
     const employeeSalaries = salaries
-      .filter((sal) => sal.employee._id === employeeId)
+      .filter((sal) => sal._id === employeeId)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return employeeSalaries.length > 0 ? employeeSalaries[0] : null;
   };
@@ -467,7 +468,7 @@ const Salaries = () => {
 
   // Handle adding a new salary - NO PASSWORD REQUIRED
   const handleAddSalary = async () => {
-    if (!formData.employee?._id || !formData.date ) {
+    if (!formData.employee?._id || !formData.date) {
       setEditError("Please fill all required fields with valid data.");
       return;
     }
@@ -495,7 +496,7 @@ const Salaries = () => {
     } catch (error: any) {
       setEditError(
         error.response?.data?.message ||
-          "Error adding salary. Please try again."
+        "Error adding salary. Please try again."
       );
     }
   };
@@ -584,11 +585,11 @@ const Salaries = () => {
   ];
 
   // Filter salaries based on search query
- const filteredSalaries = salaries.filter(
-  (salary) =>
-    salary.employee?.name && // Must exist and have a name
-    salary.employee.name.toLowerCase().includes(searchQuery.toLowerCase())
-);
+  const filteredSalaries = salaries.filter(
+    (salary) =>
+      salary.employee?.name && // Must exist and have a name
+      salary.employee.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Table data
   const data = filteredSalaries.map((salary) => [
@@ -603,9 +604,8 @@ const Salaries = () => {
     `₹${(salary.deduction || 0).toFixed(2)}`,
     <span
       key={`borrowed-${salary._id}`}
-      className={`${
-        salary.borrowed > 0 ? "text-red-600 font-medium" : "text-gray-600"
-      }`}
+      className={`${salary.borrowed > 0 ? "text-red-600 font-medium" : "text-gray-600"
+        }`}
     >
       ₹{salary.borrowed.toFixed(2)}
     </span>,
@@ -764,11 +764,10 @@ const Salaries = () => {
                 </button>
                 <button
                   onClick={handlePasswordSubmit}
-                  className={`flex-1 py-2.5 rounded-lg text-white flex items-center justify-center text-sm font-medium transition-colors ${
-                    isPasswordSubmitting || !password.trim()
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                  className={`flex-1 py-2.5 rounded-lg text-white flex items-center justify-center text-sm font-medium transition-colors ${isPasswordSubmitting || !password.trim()
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                    }`}
                   disabled={isPasswordSubmitting || !password.trim()}
                 >
                   {isPasswordSubmitting ? (
@@ -1008,11 +1007,10 @@ const Salaries = () => {
                   Cancel
                 </button>
                 <button
-                  className={`px-6 py-2.5 rounded-lg text-white font-medium text-sm transition-colors disabled:cursor-not-allowed ${
-                    currentSalary
-                      ? "bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
-                      : "bg-green-600 hover:bg-green-700"
-                  }`}
+                  className={`px-6 py-2.5 rounded-lg text-white font-medium text-sm transition-colors disabled:cursor-not-allowed ${currentSalary
+                    ? "bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+                    : "bg-green-600 hover:bg-green-700"
+                    }`}
                   onClick={currentSalary ? handleEditSalary : handleAddSalary}
                   disabled={
                     isPasswordSubmitting ||
