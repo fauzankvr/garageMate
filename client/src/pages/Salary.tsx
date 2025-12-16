@@ -151,7 +151,7 @@ const Salaries = () => {
               setCurrentSalary(action.salary);
               setFormData({
                 employee: action.salary.employee,
-                date: action.salary.date,
+                date: new Date(action.salary.date).toISOString().split("T")[0],
                 baseSalary: action.salary.baseSalary,
                 bonus: action.salary.bonus || 0,
                 deduction: action.salary.deduction || 0,
@@ -171,7 +171,7 @@ const Salaries = () => {
               setCurrentSalary(action.salary);
               setFormData({
                 employee: action.salary.employee,
-                date: action.salary.date,
+                date: new Date(action.salary.date).toISOString().split("T")[0],
                 baseSalary: action.salary.baseSalary,
                 bonus: action.salary.bonus || 0,
                 deduction: action.salary.deduction || 0,
@@ -501,18 +501,59 @@ const Salaries = () => {
     }
   };
 
-  // Handle editing a salary - REQUIRES PASSWORD
-  const handleEditSalary = () => {
+  // Handle editing a salary - NO PASSWORD REQUIRED
+  const handleEditSalary = async () => {
     if (!currentSalary?._id || !formData.employee?._id) {
       setEditError("Invalid salary data.");
       return;
     }
 
-    setPendingAction({ type: "editSalary", salary: currentSalary });
-    setPasswordModalOpen(true);
-    setPassword("");
-    setPasswordError(null);
-    setIsPasswordSubmitting(false);
+    try {
+      const payload = {
+        employee: formData.employee._id,
+        date: formData.date,
+        baseSalary: Number(formData.baseSalary),
+        bonus: Number(formData.bonus) || 0,
+        deduction: Number(formData.deduction) || 0,
+        borrowed: Number(formData.borrowed) || 0,
+        borrowedHistory: formData.borrowedHistory || [],
+        due: Number(formData.due) || 0,
+      };
+      const response = await instance.put(
+        `/api/salaries/${currentSalary._id}`,
+        payload
+      );
+      if (response.status === 200) {
+        const updatedSalary = response.data;
+        setSalaries((prev) =>
+          prev.map((sal) =>
+            sal._id === updatedSalary._id ? updatedSalary : sal
+          )
+        );
+        setIsModalOpen(false);
+        setCurrentSalary(null);
+        setFormData({
+          employee: { _id: "", name: "", phone: "", baseSalary: 0 },
+          date: "",
+          baseSalary: 0,
+          bonus: 0,
+          deduction: 0,
+          borrowed: 0,
+          borrowedHistory: [],
+          due: 0,
+          newBorrowDate: "",
+          newBorrowAmount: 0,
+        });
+        setEditError(null);
+      } else {
+        setEditError("Failed to update salary.");
+      }
+    } catch (error: any) {
+      setEditError(
+        error.response?.data?.message ||
+        "Error updating salary. Please try again."
+      );
+    }
   };
 
   // Handle adding a borrow entry via button - REQUIRES PASSWORD
@@ -524,7 +565,7 @@ const Salaries = () => {
     setIsPasswordSubmitting(false);
   };
 
-  // Open modal for adding (NO PASSWORD) or editing (WITH PASSWORD)
+  // Open modal for adding (NO PASSWORD) or editing (NO PASSWORD)
   const openModal = (salary?: Salary) => {
     if (salary) {
       // EDIT - Requires password
@@ -1019,7 +1060,7 @@ const Salaries = () => {
                   }
                 >
                   {currentSalary
-                    ? "Update Salary (Requires Password)"
+                    ? "Update Salary"
                     : "Add Salary"}
                 </button>
               </div>
