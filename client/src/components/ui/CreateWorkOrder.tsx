@@ -322,8 +322,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
       setNewCustomer({ name: "", phone: "", email: "" });
       alert("Customer created successfully!");
     } catch (error: any) {
-      console.error("Error creating customer:", error);
-      alert(`Error creating customer: ${error.message}`);
+      alert(`Error creating customer: ${error.response.data.message}`);
     }
   };
 
@@ -509,7 +508,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
     });
     setSelectedCustomer(vehicle.customerId);
   };
-   const handleVehicleSelect1 = (vehicle: Vehicle): void => {
+  const handleVehicleSelect1 = (vehicle: Vehicle): void => {
     setSelectedVehicle(vehicle);
   };
 
@@ -731,8 +730,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ workOrder, onSave }) => {
                     <div className="mt-2">
                       <span
                         className={`inline-block text-sm font-medium ${selectedVehicle.serviceCount === 10
-                            ? "bg-green-100 text-green-700 rounded-full px-3 py-1"
-                            : "text-gray-700"
+                          ? "bg-green-100 text-green-700 rounded-full px-3 py-1"
+                          : "text-gray-700"
                           }`}
                       >
                         Service Count:{" "}

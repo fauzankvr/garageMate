@@ -28,10 +28,13 @@ class WorkOrderService {
 
   async create(data: any): Promise<WorkOrder> {
     try {
+      // Remove createdAt and updatedAt to prevent manual override
+      const { createdAt, updatedAt, ...cleanData } = data;
+
       // Remove temporary IDs from services (IDs that start with 'temp-')
       const sanitizedData = {
-        ...data,
-        services: data.services.map((service: any) => {
+        ...cleanData,
+        services: cleanData.services.map((service: any) => {
           if (service._id && service._id.startsWith("temp-")) {
             const { _id, ...serviceWithoutId } = service;
             return serviceWithoutId;
@@ -111,13 +114,20 @@ class WorkOrderService {
         };
       }
 
-      return await this.workOrderModel
+      const workOrders = await this.workOrderModel
         .find(query)
         .populate("customerId")
         .populate("vehicleId")
         .populate("products.productId")
-        .sort({ createdAt: -1 }) // Sort by latest first
         .exec();
+
+      // Sort by serialNumber numerically in descending order (latest on top)
+      // Handles mixed lengths correctly (e.g. INV-1000 > INV-999)
+      return workOrders.sort((a: any, b: any) => {
+        const numA = parseInt((a.serialNumber || "").replace("INV-", ""), 10) || 0;
+        const numB = parseInt((b.serialNumber || "").replace("INV-", ""), 10) || 0;
+        return numB - numA;
+      });
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to fetch work orders: ${error.message}`);
@@ -197,7 +207,7 @@ class WorkOrderService {
       // if (!mongoose.isValidObjectId(vehicleId)) {
       //   throw new Error("Invalid vehicleId");
       // }
-    const objectId = new mongoose.Types.ObjectId(vehicleId);
+      const objectId = new mongoose.Types.ObjectId(vehicleId);
       // Query work orders by vehicleId and populate services where isOffer: true
       const workOrders = await this.workOrderModel
         .find({

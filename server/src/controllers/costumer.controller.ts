@@ -64,8 +64,13 @@ class CustomerController {
     try {
       const newCustomer = await customerService.create(req.body);
       res.status(201).json(newCustomer);
-    } catch (error) {
-      res.status(400).json({ message: "Error creating customer", error });
+    } catch (error: any) {
+      console.error(error.message);
+
+      res.status(400).json({
+        success: false,
+        message: error.message || "Failed to create customer"
+      });
     }
   }
 
@@ -73,13 +78,13 @@ class CustomerController {
     const { id } = req.params;
     if (!id) {
       res.status(400).json({ message: "Missing customer ID" });
-      return 
+      return
     }
     try {
       const updatedCustomer = await customerService.update(id, req.body as Partial<Customer>);
       if (!updatedCustomer) {
-         res.status(404).json({ message: "Customer not found" });
-         return
+        res.status(404).json({ message: "Customer not found" });
+        return
       }
       res.json(updatedCustomer);
     } catch (error) {
@@ -96,8 +101,8 @@ class CustomerController {
     try {
       const deleted = await customerService.delete(id);
       if (!deleted) {
-         res.status(404).json({ message: "Customer not found" });
-         return;
+        res.status(404).json({ message: "Customer not found" });
+        return;
       }
       res.json({ message: "Customer deleted successfully" });
     } catch (error) {
@@ -105,21 +110,21 @@ class CustomerController {
     }
   }
   async verify(req: Request<{}, {}, LoginRequestBody>, res: Response): Promise<void> {
-  const { password } = req.body;
-  const VALID_PASSWORD = process.env.ADMIN_PASSWORD || "shahul@123";
+    const { password } = req.body;
+    const VALID_PASSWORD = process.env.ADMIN_PASSWORD || "shahul@123";
 
-  if (!password) {
-    res.status(400).json({ success: false, message: "Password is required" });
-    return;
+    if (!password) {
+      res.status(400).json({ success: false, message: "Password is required" });
+      return;
+    }
+
+    if (password === VALID_PASSWORD) {
+      res.status(200).json({ success: true });
+      return;
+    }
+
+    res.status(401).json({ success: false, message: "Invalid password" });
   }
-
-  if (password === VALID_PASSWORD) {
-    res.status(200).json({ success: true });
-    return;
-  }
-
-  res.status(401).json({ success: false, message: "Invalid password" });
-}
 
 }
 

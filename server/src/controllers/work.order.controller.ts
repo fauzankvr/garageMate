@@ -141,7 +141,12 @@ class WorkOrderController {
   // Get all work orders
   async getAll(req: Request, res: Response): Promise<void> {
     try {
-      const workOrders = await workOrderService.findAll();
+      const filter = {
+        date: req.query.date as string,
+        month: req.query.month as string,
+        year: req.query.year as string,
+      };
+      const workOrders = await workOrderService.findAll(filter);
       res.status(200).json({
         success: true,
         data: workOrders,

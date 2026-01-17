@@ -27,7 +27,7 @@ const CreateCustomer = () => {
       setPhone("");
       setEmail("");
     } catch (error: any) {
-      console.error("Error creating customer:", error);
+      console.error("Error creating customer:", error.message);
       setMessage("Something went wrong while creating the customer.");
     } finally {
       setLoading(false);

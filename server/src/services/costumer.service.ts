@@ -10,12 +10,16 @@ class CustomerService {
 
   async create(data: Customer): Promise<Customer> {
     try {
+      const Oldcustomer = await this.customerModel.findOne({ phone: data.phone });
+      if (Oldcustomer) {
+        throw new Error("Customer already exists");
+      }
       const customer = new this.customerModel(data);
       return await customer.save();
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to create customer: ${errorMessage}`);
+      throw new Error(`${errorMessage}`);
     }
   }
 
